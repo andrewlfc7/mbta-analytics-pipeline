@@ -10,6 +10,10 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    # Resource Optimizations for e2-medium
+    AIRFLOW__WEBSERVER__WORKERS: 2
+    AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: 300
+    AIRFLOW__CORE__DAG_PARSING_INTERVAL: 60
     MBTA_ENV: gcp
     MBTA_API_KEY: ${MBTA_API_KEY}
     GCP_PROJECT_ID: server-i3
@@ -66,7 +70,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     restart: "no"
 
   airflow-webserver:
@@ -83,7 +87,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     restart: always
 
   airflow-scheduler:
@@ -98,7 +102,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     restart: always
 
 volumes:
