@@ -1,0 +1,104 @@
+"""DAG: Daily data quality checks."""
+
+from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+default_args = {
+    "owner": "mbta",
+    "depends_on_past": False,
+    "email_on_failure": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=2),
+}
+
+
+def check_data_freshness():
+    """Verify raw data has been updated recently."""
+    from pathlib import Path
+    from datetime import datetime, timezone
+
+    raw_path = Path("./data/raw")
+    stale_entities = []
+    now = datetime.now(timezone.utc)
+
+    entities = ["routes", "stops", "predictions", "vehicles", "alerts", "weather"]
+    for entity in entities:
+        entity_path = raw_path / entity
+        if not entity_path.exists():
+            stale_entities.append((entity, "missing"))
+            continue
+
+        parquet_files = list(entity_path.glob("**/*.parquet"))
+        if not parquet_files:
+            stale_entities.append((entity, "no files"))
+            continue
+
+        latest = max(f.stat().st_mtime for f in parquet_files)
+        age_hours = (now.timestamp() - latest) / 3600
+
+        if entity in ["predictions", "vehicles"] and age_hours > 0.5:
+            stale_entities.append((entity, f"stale ({age_hours:.1f}h)"))
+        elif age_hours > 25:
+            stale_entities.append((entity, f"stale ({age_hours:.1f}h)"))
+
+    if stale_entities:
+        msg = "Stale data detected:\n" + "\n".join(f"  {e}: {reason}" for e, reason in stale_entities)
+        print(msg)
+        raise ValueError(msg)
+
+    print("All data sources are fresh")
+
+
+def check_row_counts():
+    """Verify minimum row counts in raw tables."""
+    from src.loaders.duckdb_loader import DuckDBLoader
+
+    loader = DuckDBLoader()
+    stats = loader.table_stats()
+
+    minimums = {
+        "raw_routes": 100,
+        "raw_stops": 5000,
+        "raw_predictions": 500,
+        "raw_vehicles": 10,
+    }
+
+    failures = []
+    for table, min_rows in minimums.items():
+        actual = stats.get(table, 0)
+        if actual < min_rows:
+            failures.append(f"{table}: {actual} rows (min: {min_rows})")
+
+    if failures:
+        msg = "Row count checks failed:\n" + "\n".join(f"  {f}" for f in failures)
+        print(msg)
+        raise ValueError(msg)
+
+    print("All row count checks passed")
+    for table, count in stats.items():
+        print(f"  {table}: {count:,} rows")
+
+
+with DAG(
+    dag_id="data_quality",
+    default_args=default_args,
+    description="Daily data quality and freshness checks",
+    schedule_interval="0 7 * * *",
+    start_date=datetime(2025, 1, 1),
+    catchup=False,
+    tags=["mbta", "quality"],
+) as dag:
+
+    freshness = PythonOperator(
+        task_id="check_data_freshness",
+        python_callable=check_data_freshness,
+    )
+
+    row_counts = PythonOperator(
+        task_id="check_row_counts",
+        python_callable=check_row_counts,
+    )
+
+    freshness >> row_counts

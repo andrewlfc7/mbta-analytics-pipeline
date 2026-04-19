@@ -1,0 +1,9 @@
+httpx
+polars
+pyarrow
+duckdb
+python-dotenv
+structlog
+schedule
+google-cloud-storage
+google-cloud-bigquery
