@@ -43,4 +43,12 @@ jobs:
         run: |
           gcloud compute ssh "${{ secrets.GCP_INSTANCE_NAME }}" \
             --zone "${{ secrets.GCP_ZONE }}" \
-            --command "git config --global --add safe.directory /opt/mbta-analytics-pipeline && cd /opt/mbta-analytics-pipeline && git fetch origin && git reset --hard origin/master && docker compose up -d --build && docker image prune -f"
+            --command "\
+              git config --global --add safe.directory /opt/mbta-analytics-pipeline && \
+              cd /opt/mbta-analytics-pipeline && \
+              cp .env /tmp/.env.backup 2>/dev/null || true && \
+              git fetch origin && \
+              git reset --hard origin/master && \
+              cp /tmp/.env.backup .env 2>/dev/null || true && \
+              sudo docker compose up -d --build && \
+              sudo docker image prune -f"
