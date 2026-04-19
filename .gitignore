@@ -1,0 +1,38 @@
+# Data
+data/
+*.duckdb
+*.parquet
+
+# Environment
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+
+# Airflow
+logs/
+airflow.db
+airflow-webserver.pid
+
+# dbt
+dbt_mbta/target/
+dbt_mbta/dbt_packages/
+dbt_mbta/logs/
+
+# Great Expectations
+great_expectations/uncommitted/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

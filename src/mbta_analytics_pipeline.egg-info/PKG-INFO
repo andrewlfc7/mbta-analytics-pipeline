@@ -1,0 +1,28 @@
+Metadata-Version: 2.4
+Name: mbta-analytics-pipeline
+Version: 0.1.0
+Requires-Python: >=3.11
+Requires-Dist: httpx
+Requires-Dist: polars
+Requires-Dist: pyarrow
+Requires-Dist: duckdb
+Requires-Dist: apache-airflow
+Requires-Dist: dbt-duckdb
+Requires-Dist: dbt-bigquery
+Requires-Dist: great-expectations
+Requires-Dist: google-cloud-storage
+Requires-Dist: google-cloud-bigquery
+Requires-Dist: python-dotenv
+Requires-Dist: structlog
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: jupyter; extra == "dev"
+Requires-Dist: plotly; extra == "dev"
+Requires-Dist: folium; extra == "dev"
+Requires-Dist: scikit-learn; extra == "dev"
+Requires-Dist: xgboost; extra == "dev"
+Requires-Dist: matplotlib; extra == "dev"
+Requires-Dist: seaborn; extra == "dev"
