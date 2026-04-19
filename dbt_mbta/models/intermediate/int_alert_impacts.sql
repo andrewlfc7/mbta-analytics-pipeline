@@ -27,13 +27,13 @@ with alerts as (
         -- Duration metrics
         case
             when active_end is not null and active_start is not null then
-                epoch(active_end) - epoch(active_start)
+                {{ datediff('active_start', 'active_end', 'second') }}
             else null
         end as duration_seconds,
 
         case
             when active_end is not null and active_start is not null then
-                (epoch(active_end) - epoch(active_start)) / 3600.0
+                {{ datediff('active_start', 'active_end', 'second') }} / 3600.0
             else null
         end as duration_hours,
 

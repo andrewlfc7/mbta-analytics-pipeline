@@ -18,7 +18,7 @@ with vehicles as (
         longitude,
         vehicle_updated_at,
         extracted_at,
-        date_trunc('hour', extracted_at) as activity_hour
+        {{ dbt.date_trunc('hour', 'extracted_at') }} as activity_hour
     from {{ ref('stg_vehicles') }}
 ),
 

@@ -17,12 +17,13 @@ from src.ingestion.weather import WeatherExtractor
 # ---------------------------------------------------------------------------
 
 
+
 @pytest.fixture
 def route_records() -> list[dict]:
     return [
         {
             "id": "Red",
-            "type": "route",
+            "type": 1,  # attributes.type overwrites JSON:API type in _parse_response
             "long_name": "Red Line",
             "short_name": "",
             "description": "Rapid Transit",
@@ -35,7 +36,6 @@ def route_records() -> list[dict]:
             "listed_route": True,
             "line_id": "line-Red",
             "agency_id": "1",
-            "route_type": 1,
         },
         {
             "id": "Green-B",
@@ -243,12 +243,26 @@ def alert_records() -> list[dict]:
             "short_header": "",
             "service_effect": "Station issue at Jackson Square",
             "duration_certainty": "UNKNOWN",
-            "active_period": [{"start": "2025-09-27T03:00:00-04:00", "end": None}],
+            "active_period": [
+                {"start": "2025-09-27T03:00:00-04:00", "end": None},
+            ],
             "created_at": "2026-03-20T23:20:55-04:00",
             "updated_at": "2026-03-26T21:31:45-04:00",
             "closed_timestamp": None,
             "url": "http://www.mbta.com/JacksonSquare",
             "informed_entity": [
+                {
+                    "stop": "70006",
+                    "route_type": 1,
+                    "route": "Orange",
+                    "activities": ["BOARD"],
+                },
+                {
+                    "stop": "70007",
+                    "route_type": 1,
+                    "route": "Orange",
+                    "activities": ["BOARD"],
+                },
                 {
                     "stop": "place-jaksn",
                     "route_type": 1,
@@ -517,6 +531,8 @@ class TestAlertsExtractor:
         assert df["active_start"][0] == "2025-09-27T03:00:00-04:00"
         assert df["active_end"][0] is None
 
+
+
     def test_informed_entity_extracted(self, alert_records):
         extractor = AlertsExtractor()
         df = extractor.to_dataframe(alert_records)
@@ -525,7 +541,9 @@ class TestAlertsExtractor:
         routes = df["affected_routes"][0]
         assert "Orange" in routes
         stops = df["affected_stops"][0]
-        assert len(stops) == 3
+        assert "place-jaksn" in stops
+        assert "70006" in stops
+        assert "70007" in stops
 
     def test_empty_records(self):
         extractor = AlertsExtractor()

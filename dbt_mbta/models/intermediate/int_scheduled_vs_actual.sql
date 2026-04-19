@@ -55,7 +55,7 @@ stops as (
     from {{ ref('stg_stops') }}
 ),
 
-joined as (
+with_delay as (
     select
         p.prediction_id,
         p.route_id,
@@ -83,28 +83,14 @@ joined as (
         p.arrival_uncertainty,
         p.departure_uncertainty,
 
-        -- Delay computation (use arrival if available, else departure)
+        -- Delay computation
         case
             when p.predicted_arrival is not null and sch.scheduled_arrival is not null then
-                epoch(p.predicted_arrival) - epoch(sch.scheduled_arrival)
+                {{ datediff('sch.scheduled_arrival', 'p.predicted_arrival', 'second') }}
             when p.predicted_departure is not null and sch.scheduled_departure is not null then
-                epoch(p.predicted_departure) - epoch(sch.scheduled_departure)
+                {{ datediff('sch.scheduled_departure', 'p.predicted_departure', 'second') }}
             else null
         end as delay_seconds,
-
-        -- Delay classification
-        case
-            when delay_seconds is null then 'unknown'
-            when delay_seconds <= -60 then 'early'
-            when delay_seconds <= 60 then 'on_time'
-            when delay_seconds <= 300 then 'slightly_late'
-            when delay_seconds <= 600 then 'late'
-            else 'very_late'
-        end as delay_category,
-
-        -- Boolean flags
-        case when delay_seconds > 60 then true else false end as is_late,
-        case when delay_seconds > 300 then true else false end as is_significantly_late,
 
         p.schedule_relationship,
         p.status,
@@ -123,6 +109,27 @@ joined as (
 
     left join stops s
         on p.stop_id = s.stop_id
+),
+
+classified as (
+    select
+        *,
+
+        -- Delay classification
+        case
+            when delay_seconds is null then 'unknown'
+            when delay_seconds <= -60 then 'early'
+            when delay_seconds <= 60 then 'on_time'
+            when delay_seconds <= 300 then 'slightly_late'
+            when delay_seconds <= 600 then 'late'
+            else 'very_late'
+        end as delay_category,
+
+        -- Boolean flags
+        case when delay_seconds > 60 then true else false end as is_late,
+        case when delay_seconds > 300 then true else false end as is_significantly_late
+
+    from with_delay
 )
 
-select * from joined
+select * from classified

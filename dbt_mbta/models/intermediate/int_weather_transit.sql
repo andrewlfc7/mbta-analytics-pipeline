@@ -14,7 +14,7 @@ with predictions as (
         predicted_departure,
         extracted_at,
         -- Get the hour for weather join
-        date_trunc('hour', coalesce(predicted_arrival, predicted_departure)) as prediction_hour
+        {{ dbt.date_trunc('hour', 'coalesce(predicted_arrival, predicted_departure)') }} as prediction_hour
     from {{ ref('stg_predictions') }}
     where coalesce(predicted_arrival, predicted_departure) is not null
 ),
@@ -44,7 +44,7 @@ weather as (
     from {{ ref('stg_weather') }}
 ),
 
-joined as (
+with_delay as (
     select
         p.prediction_id,
         p.route_id,
@@ -61,9 +61,9 @@ joined as (
         -- Delay
         case
             when p.predicted_arrival is not null and sch.scheduled_arrival is not null then
-                epoch(p.predicted_arrival) - epoch(sch.scheduled_arrival)
+                {{ datediff('sch.scheduled_arrival', 'p.predicted_arrival', 'second') }}
             when p.predicted_departure is not null and sch.scheduled_departure is not null then
-                epoch(p.predicted_departure) - epoch(sch.scheduled_departure)
+                {{ datediff('sch.scheduled_departure', 'p.predicted_departure', 'second') }}
             else null
         end as delay_seconds,
 
@@ -97,4 +97,4 @@ joined as (
         on p.prediction_hour = w.weather_timestamp
 )
 
-select * from joined
+select * from with_delay
