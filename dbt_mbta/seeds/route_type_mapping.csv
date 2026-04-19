@@ -1,0 +1,6 @@
+route_type,route_type_name,route_type_category
+0,Light Rail,Rail
+1,Heavy Rail,Rail
+2,Commuter Rail,Rail
+3,Bus,Bus
+4,Ferry,Ferry

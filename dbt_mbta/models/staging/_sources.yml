@@ -1,0 +1,57 @@
+version: 2
+
+sources:
+  - name: raw_mbta
+    schema: raw_mbta
+    description: "Raw MBTA data loaded from parquet files"
+    tables:
+      - name: raw_routes
+        description: "Raw route data from MBTA API /routes endpoint"
+        columns:
+          - name: route_id
+            tests:
+              - not_null
+              - unique
+      - name: raw_stops
+        description: "Raw stop data from MBTA API /stops endpoint"
+        columns:
+          - name: stop_id
+            tests:
+              - not_null
+              - unique
+      - name: raw_trips
+        description: "Raw trip data from MBTA API /trips endpoint"
+        columns:
+          - name: trip_id
+            tests:
+              - not_null
+      - name: raw_schedules
+        description: "Raw schedule data from MBTA API /schedules endpoint"
+        columns:
+          - name: schedule_id
+            tests:
+              - not_null
+      - name: raw_predictions
+        description: "Raw real-time prediction data from MBTA API /predictions endpoint"
+        columns:
+          - name: prediction_id
+            tests:
+              - not_null
+      - name: raw_vehicles
+        description: "Raw real-time vehicle position data from MBTA API /vehicles endpoint"
+        columns:
+          - name: vehicle_id
+            tests:
+              - not_null
+      - name: raw_alerts
+        description: "Raw alert data from MBTA API /alerts endpoint"
+        columns:
+          - name: alert_id
+            tests:
+              - not_null
+      - name: raw_weather
+        description: "Raw hourly weather data from Open-Meteo API"
+        columns:
+          - name: timestamp
+            tests:
+              - not_null

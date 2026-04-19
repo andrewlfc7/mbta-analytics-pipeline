@@ -1,0 +1,100 @@
+version: 2
+
+models:
+  - name: stg_routes
+    description: "Cleaned and typed MBTA routes"
+    columns:
+      - name: route_id
+        description: "Unique route identifier"
+        tests:
+          - not_null
+          - unique
+      - name: route_type
+        description: "GTFS route type (0=Light Rail, 1=Heavy Rail, 2=Commuter Rail, 3=Bus, 4=Ferry)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4]
+
+  - name: stg_stops
+    description: "Cleaned and typed MBTA stops and stations"
+    columns:
+      - name: stop_id
+        description: "Unique stop identifier"
+        tests:
+          - not_null
+          - unique
+      - name: latitude
+        tests:
+          - not_null
+      - name: longitude
+        tests:
+          - not_null
+
+  - name: stg_trips
+    description: "Cleaned MBTA trips with route relationships"
+    columns:
+      - name: trip_id
+        description: "Unique trip identifier"
+        tests:
+          - not_null
+      - name: route_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_routes')
+              field: route_id
+              config:
+                severity: warn
+
+  - name: stg_schedules
+    description: "Cleaned scheduled arrival/departure times"
+    columns:
+      - name: schedule_id
+        tests:
+          - not_null
+      - name: route_id
+        tests:
+          - not_null
+      - name: stop_id
+        tests:
+          - not_null
+      - name: trip_id
+        tests:
+          - not_null
+
+  - name: stg_predictions
+    description: "Cleaned real-time predictions with parsed timestamps"
+    columns:
+      - name: prediction_id
+        tests:
+          - not_null
+      - name: route_id
+        tests:
+          - not_null
+
+  - name: stg_vehicles
+    description: "Cleaned vehicle positions with occupancy metrics"
+    columns:
+      - name: vehicle_id
+        tests:
+          - not_null
+      - name: route_id
+        tests:
+          - not_null
+
+  - name: stg_alerts
+    description: "Cleaned alerts with parsed time windows"
+    columns:
+      - name: alert_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_weather
+    description: "Cleaned hourly Boston weather data"
+    columns:
+      - name: weather_timestamp
+        tests:
+          - not_null
+          - unique
