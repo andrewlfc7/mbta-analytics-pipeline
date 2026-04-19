@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: int_scheduled_vs_actual
+    description: "Joins scheduled and predicted arrival times to compute delays"
+    columns:
+      - name: prediction_id
+        tests:
+          - not_null
+      - name: delay_seconds
+        description: "Predicted minus scheduled time in seconds. Positive = late."
+
+  - name: int_stop_activity
+    description: "Vehicle counts and occupancy metrics per stop per hour"
+    columns:
+      - name: stop_id
+        tests:
+          - not_null
+      - name: activity_hour
+        tests:
+          - not_null
+
+  - name: int_alert_impacts
+    description: "Alerts joined to routes and stops with duration metrics"
+    columns:
+      - name: alert_id
+        tests:
+          - not_null
+
+  - name: int_weather_transit
+    description: "Weather conditions joined to predictions by hour for delay correlation"
+    columns:
+      - name: prediction_id
+        tests:
+          - not_null
