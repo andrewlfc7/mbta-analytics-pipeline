@@ -105,8 +105,7 @@ class WeatherExtractor:
         dt = dt or datetime.utcnow()
         output_path = get_dimension_path(self.config.raw_path, self.entity_name, dt)
 
-        if self.config.is_local:
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         df.write_parquet(output_path)
         self.logger.info("saved_weather", path=output_path, rows=len(df))

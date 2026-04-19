@@ -143,8 +143,7 @@ class BaseExtractor(ABC):
         output_path = self.get_output_path(dt)
 
         # Create directories for local storage
-        if self.config.is_local:
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         df.write_parquet(output_path)
         self.logger.info(
