@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,30 +26,20 @@ jobs:
           pip install httpx polars pyarrow duckdb python-dotenv structlog pytest
           pytest tests/test_ingestion.py tests/test_extractors.py tests/test_loaders.py -v
 
-      - name: Validate deploy secrets
-        run: |
-          [ -n "${{ secrets.GCP_VM_HOST }}" ] || (echo "Missing GCP_VM_HOST" && exit 1)
-          [ -n "${{ secrets.GCP_VM_USER }}" ] || (echo "Missing GCP_VM_USER" && exit 1)
-          [ -n "${{ secrets.GCP_VM_SSH_KEY_B64 }}" ] || (echo "Missing GCP_VM_SSH_KEY_B64" && exit 1)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Test SSH connection
+      - name: Configure gcloud project
         run: |
-          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} "echo connected"
+          gcloud config set project "${{ secrets.GCP_PROJECT_ID }}"
 
-      - name: Deploy on VM
+      - name: Deploy on VM with gcloud ssh
         run: |
-          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} << 'EOF'
-            set -e
-            cd ~/mbta-analytics-pipeline
-            git fetch origin
-            git reset --hard origin/main
-            docker compose up -d --build
-            docker image prune -f
-          EOF
+          gcloud compute ssh "${{ secrets.GCP_INSTANCE_NAME }}" \
+            --zone "${{ secrets.GCP_ZONE }}" \
+            --command "cd ~/mbta-analytics-pipeline && git fetch origin && git reset --hard origin/main && docker compose up -d --build && docker image prune -f"
