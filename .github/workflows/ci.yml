@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install httpx polars pyarrow duckdb python-dotenv structlog pytest ruff mypy
+
+      - name: Lint with ruff
+        run: ruff check src/ tests/ dags/
+
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: pytest tests/test_ingestion.py tests/test_extractors.py tests/test_loaders.py -v
+
+      - name: Run API contract tests
+        run: pytest tests/test_api_contract.py -v -m contract
+        continue-on-error: true
+
+  dbt-compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: |
+          pip install dbt-duckdb dbt-core
+
+      - name: dbt deps
+        run: cd dbt_mbta && dbt deps
+
+      - name: dbt compile
+        run: cd dbt_mbta && dbt compile --profiles-dir .

@@ -1,0 +1,29 @@
+name: CD
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run tests before deploy
+        run: |
+          pip install httpx polars pyarrow duckdb python-dotenv structlog pytest
+          pytest tests/test_ingestion.py tests/test_extractors.py tests/test_loaders.py -v
+
+      - name: Build Docker image
+        run: docker compose build
+
+      - name: Deploy notification
+        run: echo "Build successful - ready for GCP deployment"
