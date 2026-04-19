@@ -1,6 +1,6 @@
 """Predictions extractor — MBTA real-time arrival/departure predictions."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import polars as pl
@@ -38,7 +38,8 @@ class PredictionsExtractor(BaseExtractor):
         if not records:
             return self._empty_frame()
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
+
         rows = []
         for r in records:
             rows.append(
