@@ -56,6 +56,35 @@ def check_data_freshness():
     print("All data sources are fresh")
 
 
+def run_quality_checks():
+    """Run data quality validation on all entities."""
+    from src.config import get_config
+    from src.quality.validators import (
+        validate_all_bigquery,
+        validate_all_local,
+    )
+
+    config = get_config()
+
+    if config.is_local:
+        results = validate_all_local()
+    else:
+        results = validate_all_bigquery()
+
+    failures = []
+    for entity, suite in results.items():
+        print(suite.summary())
+        if not suite.passed:
+            failures.append(entity)
+
+    if failures:
+        raise ValueError(
+            f"Data quality checks failed for: {', '.join(failures)}"
+        )
+
+    print("\nAll data quality checks passed!")
+
+
 def check_row_counts():
     """Verify minimum row counts in warehouse."""
     from src.config import get_config
@@ -111,9 +140,14 @@ with DAG(
         python_callable=check_data_freshness,
     )
 
+    quality = PythonOperator(
+        task_id="run_quality_checks",
+        python_callable=run_quality_checks,
+    )
+
     row_counts = PythonOperator(
         task_id="check_row_counts",
         python_callable=check_row_counts,
     )
 
-    freshness >> row_counts
+    freshness >> quality >> row_counts
