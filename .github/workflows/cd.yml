@@ -23,16 +23,26 @@ jobs:
           pip install httpx polars pyarrow duckdb python-dotenv structlog pytest
           pytest tests/test_ingestion.py tests/test_extractors.py tests/test_loaders.py -v
 
+      - name: Validate deploy secrets
+        run: |
+          [ -n "${{ secrets.GCP_VM_HOST }}" ] || (echo "Missing GCP_VM_HOST" && exit 1)
+          [ -n "${{ secrets.GCP_VM_USER }}" ] || (echo "Missing GCP_VM_USER" && exit 1)
+          [ -n "${{ secrets.GCP_VM_SSH_KEY_B64 }}" ] || (echo "Missing GCP_VM_SSH_KEY_B64" && exit 1)
+
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_VM_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.GCP_VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.GCP_VM_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} "echo connected"
 
       - name: Deploy on VM
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} << 'EOF'
             set -e
             cd ~/mbta-analytics-pipeline
             git fetch origin
