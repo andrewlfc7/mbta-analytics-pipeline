@@ -38,8 +38,9 @@ jobs:
         run: |
           gcloud config set project "${{ secrets.GCP_PROJECT_ID }}"
 
+
       - name: Deploy on VM with gcloud ssh
         run: |
           gcloud compute ssh "${{ secrets.GCP_INSTANCE_NAME }}" \
             --zone "${{ secrets.GCP_ZONE }}" \
-            --command "cd /opt/mbta-analytics-pipeline && git fetch origin && git reset --hard origin/master && docker compose up -d --build && docker image prune -f"
+            --command "git config --global --add safe.directory /opt/mbta-analytics-pipeline && cd /opt/mbta-analytics-pipeline && git fetch origin && git reset --hard origin/master && docker compose up -d --build && docker image prune -f"
