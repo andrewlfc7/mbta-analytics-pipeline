@@ -1,4 +1,9 @@
-"""Simple scheduler to accumulate data over time."""
+"""Simple scheduler to accumulate data over time.
+
+Extraction saves parquet files to raw layer (never fails due to locks).
+DuckDB loading is attempted but failures are non-fatal since raw parquet
+files are the source of truth and can be bulk-loaded later.
+"""
 
 import time
 from datetime import datetime, timezone
@@ -23,23 +28,33 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def try_load(entity: str) -> None:
+    """Attempt to load into DuckDB. Non-fatal if locked."""
+    try:
+        DuckDBLoader().load_parquet(entity)
+    except Exception as e:
+        if "lock" in str(e).lower():
+            logger.warning("db_locked_skipping_load", entity=entity)
+        else:
+            logger.error("load_failed", entity=entity, error=str(e))
+
+
 def run_dimensions():
     """Extract and load dimension tables (daily)."""
     logger.info("running_dimensions")
-    loader = DuckDBLoader()
 
     for ExtractorClass in [RoutesExtractor, StopsExtractor, TripsExtractor, SchedulesExtractor]:
         try:
             with ExtractorClass() as extractor:
                 extractor.run()
-            loader.load_parquet(ExtractorClass().entity_name)
+            try_load(ExtractorClass().entity_name)
         except Exception as e:
             logger.error("dimension_failed", entity=ExtractorClass.__name__, error=str(e))
 
     try:
         with WeatherExtractor() as extractor:
             extractor.run()
-        loader.load_parquet("weather")
+        try_load("weather")
     except Exception as e:
         logger.error("weather_failed", error=str(e))
 
@@ -47,34 +62,34 @@ def run_dimensions():
 
 
 def run_predictions():
-    """Extract and load predictions (every 5 min)."""
+    """Extract predictions (every 5 min)."""
     try:
         with PredictionsExtractor() as extractor:
             extractor.run()
-        DuckDBLoader().load_parquet("predictions")
-        logger.info("predictions_loaded", time=now_utc())
+        try_load("predictions")
+        logger.info("predictions_complete", time=now_utc())
     except Exception as e:
         logger.error("predictions_failed", error=str(e))
 
 
 def run_vehicles():
-    """Extract and load vehicles (every 5 min)."""
+    """Extract vehicles (every 5 min)."""
     try:
         with VehiclesExtractor() as extractor:
             extractor.run()
-        DuckDBLoader().load_parquet("vehicles")
-        logger.info("vehicles_loaded", time=now_utc())
+        try_load("vehicles")
+        logger.info("vehicles_complete", time=now_utc())
     except Exception as e:
         logger.error("vehicles_failed", error=str(e))
 
 
 def run_alerts():
-    """Extract and load alerts (every 15 min)."""
+    """Extract alerts (every 15 min)."""
     try:
         with AlertsExtractor() as extractor:
             extractor.run()
-        DuckDBLoader().load_parquet("alerts")
-        logger.info("alerts_loaded", time=now_utc())
+        try_load("alerts")
+        logger.info("alerts_complete", time=now_utc())
     except Exception as e:
         logger.error("alerts_failed", error=str(e))
 
