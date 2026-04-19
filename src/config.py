@@ -18,11 +18,12 @@ class LocalConfig:
     db_path: Path = Path("./data/mbta.duckdb")
 
 
+
 @dataclass(frozen=True)
 class GCPConfig:
     """GCP production configuration."""
 
-    raw_path: str = ""
+    raw_path: str = "./data/raw"          # ← local staging, NOT gs://
     warehouse: str = "bigquery"
     project_id: str = ""
     dataset: str = "raw_mbta"
@@ -39,11 +40,7 @@ class GCPConfig:
             "bucket",
             self.bucket or os.getenv("GCS_BUCKET", "mbta-raw-prod"),
         )
-        object.__setattr__(
-            self,
-            "raw_path",
-            self.raw_path or f"gs://{self.bucket}",
-        )
+
 
 
 @dataclass(frozen=True)
