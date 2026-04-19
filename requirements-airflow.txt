@@ -7,3 +7,5 @@ structlog
 schedule
 google-cloud-storage
 google-cloud-bigquery
+dbt-duckdb
+dbt-bigquery

@@ -23,7 +23,9 @@ def check_data_freshness():
     stale_entities = []
     now = datetime.now(timezone.utc)
 
-    entities = ["routes", "stops", "predictions", "vehicles", "alerts", "weather"]
+    entities = [
+        "routes", "stops", "predictions", "vehicles", "alerts", "weather",
+    ]
     for entity in entities:
         entity_path = raw_path / entity
         if not entity_path.exists():
@@ -43,9 +45,10 @@ def check_data_freshness():
         elif age_hours > 25:
             stale_entities.append((entity, f"stale ({age_hours:.1f}h)"))
 
-
     if stale_entities:
-        stale_msg = "\n".join(f"  {e}: {reason}" for e, reason in stale_entities)
+        stale_msg = "\n".join(
+            f"  {e}: {reason}" for e, reason in stale_entities
+        )
         msg = f"Stale data detected:\n{stale_msg}"
         print(msg)
         raise ValueError(msg)
@@ -54,11 +57,19 @@ def check_data_freshness():
 
 
 def check_row_counts():
-    """Verify minimum row counts in raw tables."""
-    from src.loaders.duckdb_loader import DuckDBLoader
+    """Verify minimum row counts in warehouse."""
+    from src.config import get_config
 
-    loader = DuckDBLoader()
-    stats = loader.table_stats()
+    config = get_config()
+
+    if config.is_local:
+        from src.loaders.duckdb_loader import DuckDBLoader
+
+        stats = DuckDBLoader().table_stats()
+    else:
+        from src.loaders.bigquery_loader import BigQueryLoader
+
+        stats = BigQueryLoader().table_stats()
 
     minimums = {
         "raw_routes": 100,
@@ -74,7 +85,9 @@ def check_row_counts():
             failures.append(f"{table}: {actual} rows (min: {min_rows})")
 
     if failures:
-        msg = "Row count checks failed:\n" + "\n".join(f"  {f}" for f in failures)
+        msg = "Row count checks failed:\n" + "\n".join(
+            f"  {f}" for f in failures
+        )
         print(msg)
         raise ValueError(msg)
 

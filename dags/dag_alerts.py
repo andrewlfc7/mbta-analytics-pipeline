@@ -15,15 +15,26 @@ default_args = {
 
 
 def extract_alerts():
-    """Extract alerts and load to DuckDB."""
+    """Extract alerts and load."""
+    from src.config import get_config
     from src.ingestion.alerts import AlertsExtractor
-    from src.loaders.duckdb_loader import DuckDBLoader
+
+    config = get_config()
 
     with AlertsExtractor() as extractor:
         path = extractor.run()
 
-    loader = DuckDBLoader()
-    rows = loader.load_parquet("alerts")
+    if config.is_local:
+        from src.loaders.duckdb_loader import DuckDBLoader
+
+        rows = DuckDBLoader().load_parquet("alerts")
+    else:
+        from src.loaders.bigquery_loader import BigQueryLoader
+        from src.loaders.gcs_loader import GCSLoader
+
+        GCSLoader().upload_entity("alerts")
+        rows = BigQueryLoader().load_from_gcs("alerts")
+
     return {"entity": "alerts", "path": path, "rows": rows}
 
 

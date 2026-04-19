@@ -1,4 +1,3 @@
-
 x-airflow-common: &airflow-common
   build:
     context: .
@@ -10,7 +9,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
-    MBTA_ENV: local
+    MBTA_ENV: gcp
+    MBTA_API_KEY: ${MBTA_API_KEY}
+    GCP_PROJECT_ID: server-i3
+    GCS_BUCKET: mbta-raw-prod
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/keys/mbta-sa-key.json
     PYTHONPATH: /opt/airflow
   volumes:
     - ./dags:/opt/airflow/dags
@@ -19,6 +22,8 @@ x-airflow-common: &airflow-common
     - ./dbt_mbta:/opt/airflow/dbt_mbta
     - ./great_expectations:/opt/airflow/great_expectations
     - ./.env:/opt/airflow/.env
+    - /home/Drew/mbta-sa-key.json:/opt/airflow/keys/mbta-sa-key.json:ro
+    - airflow-logs:/opt/airflow/logs
   depends_on:
     postgres:
       condition: service_healthy
@@ -37,8 +42,7 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
-    ports:
-      - "5432:5432"
+    restart: always
 
   airflow-init:
     <<: *airflow-common
@@ -82,3 +86,4 @@ services:
 
 volumes:
   postgres-data:
+  airflow-logs:

@@ -15,8 +15,12 @@ default_args = {
 
 
 def extract_and_load(extractor_class_path: str, entity: str):
-    """Extract from API and load to DuckDB."""
+    """Extract from API, upload to GCS, load to BigQuery."""
     import importlib
+
+    from src.config import get_config
+
+    config = get_config()
 
     module_path, class_name = extractor_class_path.rsplit(".", 1)
     module = importlib.import_module(module_path)
@@ -25,9 +29,17 @@ def extract_and_load(extractor_class_path: str, entity: str):
     with ExtractorClass() as extractor:
         path = extractor.run()
 
-    from src.loaders.duckdb_loader import DuckDBLoader
-    loader = DuckDBLoader()
-    rows = loader.load_parquet(entity)
+    if config.is_local:
+        from src.loaders.duckdb_loader import DuckDBLoader
+
+        rows = DuckDBLoader().load_parquet(entity)
+    else:
+        from src.loaders.bigquery_loader import BigQueryLoader
+        from src.loaders.gcs_loader import GCSLoader
+
+        GCSLoader().upload_entity(entity)
+        rows = BigQueryLoader().load_from_gcs(entity)
+
     return {"entity": entity, "path": path, "rows": rows}
 
 
@@ -59,5 +71,4 @@ with DAG(
         },
     )
 
-    # Both run in parallel
     [extract_predictions, extract_vehicles]
