@@ -22,9 +22,9 @@ with base as (
 
         -- Time dimensions
         extract(hour from extracted_at) as hour_of_day,
-        extract(dow from extracted_at) as day_of_week,
+        {{ get_day_of_week('extracted_at') }} as day_of_week,
         case
-            when extract(dow from extracted_at) in (0, 6) then 'weekend'
+            when {{ is_weekend('extracted_at') }} then 'weekend'
             else 'weekday'
         end as day_type,
         case
@@ -53,12 +53,14 @@ aggregated as (
         count(*) as prediction_count,
 
         round(avg(delay_seconds), 1) as avg_delay_seconds,
-        round(median(delay_seconds), 1) as median_delay_seconds,
+        round({{ median_val('delay_seconds') }}, 1) as median_delay_seconds,
         round(stddev(delay_seconds), 1) as stddev_delay_seconds,
 
         round(100.0 * count(case when not is_late then 1 end) / count(*), 2) as on_time_pct,
         round(100.0 * count(case when is_late then 1 end) / count(*), 2) as late_pct,
-        round(100.0 * count(case when is_significantly_late then 1 end) / count(*), 2) as significant_delay_pct,
+        round(
+            100.0 * count(case when is_significantly_late then 1 end) / count(*), 2
+        ) as significant_delay_pct,
 
         -- Category counts
         count(case when delay_category = 'early' then 1 end) as early_count,

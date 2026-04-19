@@ -48,11 +48,13 @@ delay_metrics as (
         count(distinct route_id) as routes_served,
 
         round(avg(delay_seconds), 1) as avg_delay_seconds,
-        round(median(delay_seconds), 1) as median_delay_seconds,
+        round({{ median_val('delay_seconds') }}, 1) as median_delay_seconds,
         round(100.0 * count(case when is_late then 1 end) / count(*), 2) as late_pct,
-        round(100.0 * count(case when is_significantly_late then 1 end) / count(*), 2) as significant_delay_pct,
+        round(
+            100.0 * count(case when is_significantly_late then 1 end) / count(*), 2
+        ) as significant_delay_pct,
 
-        round(percentile_cont(0.90) within group (order by delay_seconds), 1) as p90_delay_seconds
+        round({{ percentile_val('delay_seconds', 0.90) }}, 1) as p90_delay_seconds
 
     from stop_delays
     group by
@@ -82,7 +84,6 @@ combined as (
 
 select
     *,
-    -- Delay hotspot score (higher = worse performance)
     round(
         (coalesce(late_pct, 0) * 0.4)
         + (coalesce(significant_delay_pct, 0) * 0.3)

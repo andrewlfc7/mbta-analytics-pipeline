@@ -4,7 +4,7 @@ with source as (
 
 cleaned as (
     select
-        cast(timestamp as timestamp) as weather_timestamp,
+        {{ parse_ts('`timestamp`') }} as weather_timestamp,
         temperature_2m as temperature_f,
         relative_humidity_2m as humidity_pct,
         precipitation as precipitation_mm,
@@ -27,7 +27,7 @@ cleaned as (
             else 'Unknown'
         end as weather_condition
     from source
-    where timestamp is not null
+    where `timestamp` is not null
 )
 
 select * from cleaned

@@ -48,10 +48,10 @@ enriched as (
         affected_routes,
         affected_stops,
         informed_entity_count,
-        len(affected_routes) as affected_route_count,
-        len(affected_stops) as affected_stop_count,
+        {{ array_len('affected_routes') }} as affected_route_count,
+        {{ array_len('affected_stops') }} as affected_stop_count,
 
-        -- Impact score: severity × entities affected
+        -- Impact score
         round(
             severity
             * (1 + ln(1 + informed_entity_count))
