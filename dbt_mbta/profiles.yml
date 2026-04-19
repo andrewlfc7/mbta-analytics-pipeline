@@ -6,3 +6,16 @@ mbta_analytics:
       path: "../data/mbta.duckdb"
       schema: raw_mbta
       threads: 4
+    ci:
+      type: duckdb
+      path: ":memory:"
+      schema: raw_mbta
+      threads: 4
+    prod:
+      type: bigquery
+      method: service-account
+      project: server-i3
+      dataset: raw_mbta
+      keyfile: /home/Drew/mbta-sa-key.json
+      threads: 4
+      location: US

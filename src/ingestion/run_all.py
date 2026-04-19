@@ -1,12 +1,12 @@
 """Run all extractors — quick validation that everything works end to end."""
 
+from src.ingestion.alerts import AlertsExtractor
+from src.ingestion.predictions import PredictionsExtractor
 from src.ingestion.routes import RoutesExtractor
+from src.ingestion.schedules import SchedulesExtractor
 from src.ingestion.stops import StopsExtractor
 from src.ingestion.trips import TripsExtractor
-from src.ingestion.schedules import SchedulesExtractor
-from src.ingestion.predictions import PredictionsExtractor
 from src.ingestion.vehicles import VehiclesExtractor
-from src.ingestion.alerts import AlertsExtractor
 from src.ingestion.weather import WeatherExtractor
 from src.utils.logger import get_logger
 

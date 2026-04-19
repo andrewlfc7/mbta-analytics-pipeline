@@ -1,12 +1,8 @@
 """Tests for ingestion extractors — validate parsing, schema, and output."""
 
-import shutil
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import polars as pl
-import pytest
 
 
 class TestBaseExtractorParsing:

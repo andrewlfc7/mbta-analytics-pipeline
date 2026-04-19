@@ -3,15 +3,14 @@
 import polars as pl
 import pytest
 
+from src.ingestion.alerts import AlertsExtractor
+from src.ingestion.predictions import PredictionsExtractor
 from src.ingestion.routes import RoutesExtractor
+from src.ingestion.schedules import SchedulesExtractor
 from src.ingestion.stops import StopsExtractor
 from src.ingestion.trips import TripsExtractor
-from src.ingestion.schedules import SchedulesExtractor
-from src.ingestion.predictions import PredictionsExtractor
 from src.ingestion.vehicles import VehiclesExtractor
-from src.ingestion.alerts import AlertsExtractor
 from src.ingestion.weather import WeatherExtractor
-
 
 # ---------------------------------------------------------------------------
 # Fixtures — sample API records (post-parsing, pre-dataframe)
@@ -36,8 +35,7 @@ def route_records() -> list[dict]:
             "listed_route": True,
             "line_id": "line-Red",
             "agency_id": "1",
-            # This is the route_type from MBTA, mapped from attributes "type"
-            "type": 1,
+            "route_type": 1,
         },
         {
             "id": "Green-B",
@@ -190,9 +188,21 @@ def vehicle_records() -> list[dict]:
             "stop_id": "70078",
             "trip_id": "ADDED-1583710059",
             "carriages": [
-                {"label": "1930", "occupancy_status": "FEW_SEATS_AVAILABLE", "occupancy_percentage": 9},
-                {"label": "1931", "occupancy_status": "FEW_SEATS_AVAILABLE", "occupancy_percentage": 7},
-                {"label": "1953", "occupancy_status": "FEW_SEATS_AVAILABLE", "occupancy_percentage": 9},
+                {
+                    "label": "1930",
+                    "occupancy_status": "FEW_SEATS_AVAILABLE",
+                    "occupancy_percentage": 9,
+                },
+                {
+                    "label": "1931",
+                    "occupancy_status": "FEW_SEATS_AVAILABLE",
+                    "occupancy_percentage": 7,
+                },
+                {
+                    "label": "1953",
+                    "occupancy_status": "FEW_SEATS_AVAILABLE",
+                    "occupancy_percentage": 9,
+                },
             ],
         },
         {
@@ -239,9 +249,12 @@ def alert_records() -> list[dict]:
             "closed_timestamp": None,
             "url": "http://www.mbta.com/JacksonSquare",
             "informed_entity": [
-                {"stop": "70006", "route_type": 1, "route": "Orange", "activities": ["BOARD"]},
-                {"stop": "70007", "route_type": 1, "route": "Orange", "activities": ["BOARD"]},
-                {"stop": "place-jaksn", "route_type": 1, "route": "Orange", "activities": ["BOARD"]},
+                {
+                    "stop": "place-jaksn",
+                    "route_type": 1,
+                    "route": "Orange",
+                    "activities": ["BOARD"],
+                },
             ],
             "banner": None,
             "image": None,

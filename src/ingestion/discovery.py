@@ -62,7 +62,7 @@ def inspect_entity(endpoint: str, params: dict | None = None) -> None:
                 else:
                     print(f"  {rel_name}: {inner}")
 
-    print(f"\n--- Raw first record ---")
+    print("\n--- Raw first record ---")
     print(json.dumps(items[0] if items else {}, indent=2, default=str))
 
 

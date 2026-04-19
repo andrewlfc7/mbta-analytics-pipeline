@@ -16,8 +16,8 @@ default_args = {
 
 def check_data_freshness():
     """Verify raw data has been updated recently."""
-    from pathlib import Path
     from datetime import datetime, timezone
+    from pathlib import Path
 
     raw_path = Path("./data/raw")
     stale_entities = []
@@ -43,8 +43,10 @@ def check_data_freshness():
         elif age_hours > 25:
             stale_entities.append((entity, f"stale ({age_hours:.1f}h)"))
 
+
     if stale_entities:
-        msg = "Stale data detected:\n" + "\n".join(f"  {e}: {reason}" for e, reason in stale_entities)
+        stale_msg = "\n".join(f"  {e}: {reason}" for e, reason in stale_entities)
+        msg = f"Stale data detected:\n{stale_msg}"
         print(msg)
         raise ValueError(msg)
 

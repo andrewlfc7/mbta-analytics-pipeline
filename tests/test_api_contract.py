@@ -4,8 +4,8 @@ These tests verify the MBTA API hasn't changed its response format.
 Run these periodically or when things break: pytest tests/test_api_contract.py -m contract
 """
 
-import pytest
 import httpx
+import pytest
 
 from src.config import get_config
 

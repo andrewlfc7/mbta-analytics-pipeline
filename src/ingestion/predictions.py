@@ -1,6 +1,6 @@
 """Predictions extractor — MBTA real-time arrival/departure predictions."""
 
-from datetime import UTC, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 import polars as pl

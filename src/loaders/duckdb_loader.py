@@ -1,9 +1,9 @@
 """DuckDB loader — loads raw parquet files into DuckDB tables for local development."""
 
+import time
 from pathlib import Path
 
 import duckdb
-import time
 
 from src.config import AppConfig, get_config
 from src.utils.logger import get_logger
@@ -53,9 +53,11 @@ class DuckDBLoader:
         retry_delay: float = 5.0,
     ) -> int:
         if entity not in self.ENTITIES:
-            raise ValueError(f"Unknown entity: {entity}. Expected one of {list(self.ENTITIES.keys())}")
+            valid = list(self.ENTITIES.keys())
+            raise ValueError(f"Unknown entity: {entity}. Expected one of {valid}")
 
         entity_config = self.ENTITIES[entity]
+
         table_name = f"raw_mbta.{entity_config['table']}"
         mode = entity_config["mode"]
 
@@ -73,27 +75,34 @@ class DuckDBLoader:
                 try:
                     self._create_schema(conn)
 
+
                     if mode == "replace":
                         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
                         conn.execute(
-                            f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
+                            f"CREATE TABLE {table_name} AS "
+                            f"SELECT * FROM read_parquet({source}, union_by_name=true)"
                         )
                     elif mode == "append":
                         table_exists = conn.execute(
                             f"""
                             SELECT count(*) FROM information_schema.tables
-                            WHERE table_schema = 'raw_mbta' AND table_name = '{entity_config["table"]}'
+                            WHERE table_schema = 'raw_mbta'
+                              AND table_name = '{entity_config["table"]}'
                             """
                         ).fetchone()[0] > 0
 
                         if not table_exists:
                             conn.execute(
-                                f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
+                                f"CREATE TABLE {table_name} AS "
+                                f"SELECT * FROM read_parquet({source}, union_by_name=true)"
                             )
                         else:
                             conn.execute(
-                                f"INSERT INTO {table_name} SELECT * FROM read_parquet({source}, union_by_name=true)"
+                                f"INSERT INTO {table_name} "
+                                f"SELECT * FROM read_parquet({source}, union_by_name=true)"
                             )
+
+
 
                     row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
                     self.logger.info(

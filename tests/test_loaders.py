@@ -1,7 +1,5 @@
 """Tests for DuckDB loader."""
 
-import shutil
-from datetime import datetime
 from pathlib import Path
 
 import polars as pl

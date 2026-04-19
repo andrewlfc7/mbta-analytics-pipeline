@@ -49,11 +49,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install dbt
-        run: |
-          pip install dbt-duckdb dbt-core
+        run: pip install dbt-duckdb dbt-core
 
       - name: dbt deps
         run: cd dbt_mbta && dbt deps
 
       - name: dbt compile
-        run: cd dbt_mbta && dbt compile --profiles-dir .
+        run: cd dbt_mbta && dbt compile --profiles-dir . --target ci
