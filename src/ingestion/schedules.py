@@ -55,22 +55,8 @@ class SchedulesExtractor(BaseExtractor):
                 }
             )
 
-        return pl.DataFrame(rows).cast(
-            {
-                "schedule_id": pl.Utf8,
-                "arrival_time": pl.Utf8,
-                "departure_time": pl.Utf8,
-                "direction_id": pl.Int32,
-                "stop_sequence": pl.Int32,
-                "stop_headsign": pl.Utf8,
-                "pickup_type": pl.Int32,
-                "drop_off_type": pl.Int32,
-                "timepoint": pl.Boolean,
-                "route_id": pl.Utf8,
-                "stop_id": pl.Utf8,
-                "trip_id": pl.Utf8,
-            }
-        )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
+
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""

@@ -58,23 +58,8 @@ class RoutesExtractor(BaseExtractor):
                 }
             )
 
-        return pl.DataFrame(rows).cast(
-            {
-                "route_id": pl.Utf8,
-                "long_name": pl.Utf8,
-                "short_name": pl.Utf8,
-                "description": pl.Utf8,
-                "fare_class": pl.Utf8,
-                "route_type": pl.Int32,
-                "route_type_desc": pl.Utf8,
-                "color": pl.Utf8,
-                "text_color": pl.Utf8,
-                "sort_order": pl.Int32,
-                "listed_route": pl.Boolean,
-                "line_id": pl.Utf8,
-                "agency_id": pl.Utf8,
-            }
-        )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
+
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""

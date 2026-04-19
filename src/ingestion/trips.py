@@ -55,23 +55,8 @@ class TripsExtractor(BaseExtractor):
                     "shape_id": r.get("shape_id"),
                 }
             )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
 
-        return pl.DataFrame(rows).cast(
-            {
-                "trip_id": pl.Utf8,
-                "headsign": pl.Utf8,
-                "name": pl.Utf8,
-                "direction_id": pl.Int32,
-                "block_id": pl.Utf8,
-                "bikes_allowed": pl.Int32,
-                "wheelchair_accessible": pl.Int32,
-                "revenue": pl.Utf8,
-                "route_id": pl.Utf8,
-                "route_pattern_id": pl.Utf8,
-                "service_id": pl.Utf8,
-                "shape_id": pl.Utf8,
-            }
-        )
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""

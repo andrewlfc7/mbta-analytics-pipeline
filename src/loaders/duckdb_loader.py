@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import duckdb
+import time
 
 from src.config import AppConfig, get_config
 from src.utils.logger import get_logger
@@ -42,22 +43,15 @@ class DuckDBLoader:
         """Create raw_mbta schema if it doesn't exist."""
         conn.execute("CREATE SCHEMA IF NOT EXISTS raw_mbta")
 
+
     def load_parquet(
         self,
         entity: str,
         parquet_path: str | None = None,
         glob_pattern: str | None = None,
+        max_retries: int = 3,
+        retry_delay: float = 5.0,
     ) -> int:
-        """Load a parquet file or glob pattern into the corresponding raw table.
-
-        Args:
-            entity: Entity name (routes, stops, etc.)
-            parquet_path: Path to a specific parquet file
-            glob_pattern: Glob pattern to load multiple files (e.g., predictions/**/predictions.parquet)
-
-        Returns:
-            Number of rows loaded
-        """
         if entity not in self.ENTITIES:
             raise ValueError(f"Unknown entity: {entity}. Expected one of {list(self.ENTITIES.keys())}")
 
@@ -65,55 +59,69 @@ class DuckDBLoader:
         table_name = f"raw_mbta.{entity_config['table']}"
         mode = entity_config["mode"]
 
-        # Determine source
         if parquet_path:
             source = f"'{parquet_path}'"
         elif glob_pattern:
             source = f"'{glob_pattern}'"
         else:
-            # Default: glob all parquet files for this entity
             raw_path = self.config.local.raw_path
             source = f"'{raw_path}/{entity}/**/*.parquet'"
 
-        conn = self.get_connection()
-        try:
-            self._create_schema(conn)
+        for attempt in range(1, max_retries + 1):
+            try:
+                conn = self.get_connection()
+                try:
+                    self._create_schema(conn)
 
-            if mode == "replace":
-                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-                conn.execute(
-                    f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
-                )
-            elif mode == "append":
-                # Create table if not exists, then insert
-                table_exists = conn.execute(
-                    f"""
-                    SELECT count(*) FROM information_schema.tables
-                    WHERE table_schema = 'raw_mbta' AND table_name = '{entity_config["table"]}'
-                    """
-                ).fetchone()[0] > 0
+                    if mode == "replace":
+                        conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+                        conn.execute(
+                            f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
+                        )
+                    elif mode == "append":
+                        table_exists = conn.execute(
+                            f"""
+                            SELECT count(*) FROM information_schema.tables
+                            WHERE table_schema = 'raw_mbta' AND table_name = '{entity_config["table"]}'
+                            """
+                        ).fetchone()[0] > 0
 
-                if not table_exists:
-                    conn.execute(
-                        f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
+                        if not table_exists:
+                            conn.execute(
+                                f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet({source}, union_by_name=true)"
+                            )
+                        else:
+                            conn.execute(
+                                f"INSERT INTO {table_name} SELECT * FROM read_parquet({source}, union_by_name=true)"
+                            )
+
+                    row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+                    self.logger.info(
+                        "loaded",
+                        entity=entity,
+                        table=table_name,
+                        mode=mode,
+                        rows=row_count,
                     )
+                    return row_count
+
+                finally:
+                    conn.close()
+
+            except Exception as e:
+                if "lock" in str(e).lower() and attempt < max_retries:
+                    self.logger.warning(
+                        "db_locked_retrying",
+                        entity=entity,
+                        attempt=attempt,
+                        retry_in=retry_delay,
+                    )
+                    time.sleep(retry_delay)
                 else:
-                    conn.execute(
-                        f"INSERT INTO {table_name} SELECT * FROM read_parquet({source}, union_by_name=true)"
-                    )
+                    raise
 
-            row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
-            self.logger.info(
-                "loaded",
-                entity=entity,
-                table=table_name,
-                mode=mode,
-                rows=row_count,
-            )
-            return row_count
+        return 0
 
-        finally:
-            conn.close()
 
     def load_all(self) -> dict[str, int]:
         """Load all entities from raw parquet files into DuckDB."""

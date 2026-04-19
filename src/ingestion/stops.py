@@ -73,28 +73,8 @@ class StopsExtractor(BaseExtractor):
                 }
             )
 
-        return pl.DataFrame(rows).cast(
-            {
-                "stop_id": pl.Utf8,
-                "name": pl.Utf8,
-                "description": pl.Utf8,
-                "latitude": pl.Float64,
-                "longitude": pl.Float64,
-                "address": pl.Utf8,
-                "municipality": pl.Utf8,
-                "on_street": pl.Utf8,
-                "at_street": pl.Utf8,
-                "location_type": pl.Int32,
-                "location_type_desc": pl.Utf8,
-                "vehicle_type": pl.Int32,
-                "vehicle_type_desc": pl.Utf8,
-                "platform_code": pl.Utf8,
-                "platform_name": pl.Utf8,
-                "wheelchair_boarding": pl.Int32,
-                "parent_station_id": pl.Utf8,
-                "zone_id": pl.Utf8,
-            }
-        )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
+
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""

@@ -104,28 +104,7 @@ class AlertsExtractor(BaseExtractor):
                 }
             )
 
-        return pl.DataFrame(rows).cast(
-            {
-                "alert_id": pl.Utf8,
-                "cause": pl.Utf8,
-                "effect": pl.Utf8,
-                "severity": pl.Int32,
-                "lifecycle": pl.Utf8,
-                "header": pl.Utf8,
-                "description": pl.Utf8,
-                "short_header": pl.Utf8,
-                "service_effect": pl.Utf8,
-                "duration_certainty": pl.Utf8,
-                "active_start": pl.Utf8,
-                "active_end": pl.Utf8,
-                "created_at": pl.Utf8,
-                "updated_at": pl.Utf8,
-                "closed_timestamp": pl.Utf8,
-                "url": pl.Utf8,
-                "informed_entity_count": pl.Int32,
-                "extracted_at": pl.Utf8,
-            }
-        )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""

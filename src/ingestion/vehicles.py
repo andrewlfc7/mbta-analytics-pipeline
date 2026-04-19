@@ -78,28 +78,8 @@ class VehiclesExtractor(BaseExtractor):
                 }
             )
 
-        return pl.DataFrame(rows).cast(
-            {
-                "vehicle_id": pl.Utf8,
-                "label": pl.Utf8,
-                "latitude": pl.Float64,
-                "longitude": pl.Float64,
-                "bearing": pl.Int32,
-                "speed": pl.Float64,
-                "current_status": pl.Utf8,
-                "current_stop_sequence": pl.Int32,
-                "direction_id": pl.Int32,
-                "occupancy_status": pl.Utf8,
-                "carriage_count": pl.Int32,
-                "avg_occupancy_pct": pl.Float64,
-                "revenue": pl.Utf8,
-                "updated_at": pl.Utf8,
-                "route_id": pl.Utf8,
-                "stop_id": pl.Utf8,
-                "trip_id": pl.Utf8,
-                "extracted_at": pl.Utf8,
-            }
-        )
+        return pl.DataFrame(rows, schema=self._empty_frame().schema)
+
 
     def _empty_frame(self) -> pl.DataFrame:
         """Return empty DataFrame with correct schema."""
