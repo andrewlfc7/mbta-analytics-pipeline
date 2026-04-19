@@ -1,6 +1,6 @@
 """BigQuery loader — loads parquet from GCS into BigQuery tables."""
 
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 
 from src.config import AppConfig, get_config
 from src.utils.logger import get_logger
@@ -24,14 +24,26 @@ class BigQueryLoader:
         self.config = config or get_config()
         self.logger = get_logger(self.__class__.__name__)
         self.client = bigquery.Client(project=self.config.gcp.project_id)
+        self.storage_client = storage.Client(project=self.config.gcp.project_id)
         self.dataset = self.config.gcp.dataset
+
+    def _list_parquet_uris(self, entity: str) -> list[str]:
+        """List all parquet files in GCS for a given entity."""
+        bucket = self.storage_client.bucket(self.config.gcp.bucket)
+        blobs = bucket.list_blobs(prefix=f"{entity}/")
+        uris = [
+            f"gs://{self.config.gcp.bucket}/{blob.name}"
+            for blob in blobs
+            if blob.name.endswith(".parquet")
+        ]
+        return uris
 
     def load_from_gcs(self, entity: str, gcs_uri: str | None = None) -> int:
         """Load parquet from GCS into BigQuery.
 
         Args:
             entity: Entity name
-            gcs_uri: GCS URI pattern. If None, uses default bucket path.
+            gcs_uri: GCS URI pattern. If None, discovers files from bucket.
 
         Returns:
             Number of rows loaded
@@ -43,17 +55,27 @@ class BigQueryLoader:
         table_id = f"{self.config.gcp.project_id}.{self.dataset}.{entity_config['table']}"
 
         if gcs_uri is None:
-            gcs_uri = f"gs://{self.config.gcp.bucket}/{entity}/**/*.parquet"
+            uris = self._list_parquet_uris(entity)
+            if not uris:
+                self.logger.warning("no_files_in_gcs", entity=entity)
+                return 0
+        else:
+            uris = [gcs_uri]
 
         job_config = bigquery.LoadJobConfig(
             source_format=bigquery.SourceFormat.PARQUET,
             write_disposition=entity_config["mode"],
         )
 
-        self.logger.info("loading", entity=entity, table=table_id, source=gcs_uri)
+        self.logger.info(
+            "loading",
+            entity=entity,
+            table=table_id,
+            files=len(uris),
+        )
 
         load_job = self.client.load_table_from_uri(
-            gcs_uri, table_id, job_config=job_config
+            uris, table_id, job_config=job_config
         )
         load_job.result()  # Wait for completion
 
