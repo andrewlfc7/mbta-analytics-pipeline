@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: mart_route_reliability
+    description: "Route-level reliability metrics: on-time %, average delay, delay distribution"
+    columns:
+      - name: route_id
+        tests:
+          - not_null
+      - name: route_name
+        tests:
+          - not_null
+
+  - name: mart_stop_performance
+    description: "Stop-level performance: delay hotspots, busiest stops, vehicle frequency"
+    columns:
+      - name: stop_id
+        tests:
+          - not_null
+
+  - name: mart_delay_analysis
+    description: "Granular delay analysis by route, time of day, day of week"
+    columns:
+      - name: route_id
+        tests:
+          - not_null
+
+  - name: mart_alert_summary
+    description: "Alert frequency, duration, and impact by route and effect type"
+    columns:
+      - name: alert_id
+        tests:
+          - not_null
+          - unique
