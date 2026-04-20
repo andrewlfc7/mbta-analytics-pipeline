@@ -2,11 +2,22 @@
 
 from uuid import uuid4
 
-from google.api_core.exceptions import NotFound
-from google.cloud import bigquery, storage
-
 from src.config import AppConfig, get_config
 from src.utils.logger import get_logger
+
+
+def _load_google_clients():
+    """Import Google clients only when BigQuery loading is actually used."""
+    try:
+        from google.api_core.exceptions import NotFound
+        from google.cloud import bigquery, storage
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "BigQueryLoader requires google-cloud-bigquery and google-cloud-storage. "
+            "Install the production requirements before using BigQuery loading."
+        ) from exc
+
+    return NotFound, bigquery, storage
 
 
 class BigQueryLoader:
@@ -32,7 +43,8 @@ class BigQueryLoader:
     def __init__(self, config: AppConfig | None = None) -> None:
         self.config = config or get_config()
         self.logger = get_logger(self.__class__.__name__)
-        self.client = bigquery.Client(project=self.config.gcp.project_id)
+        self._not_found_error, self._bigquery, storage = _load_google_clients()
+        self.client = self._bigquery.Client(project=self.config.gcp.project_id)
         self.storage_client = storage.Client(project=self.config.gcp.project_id)
         self.dataset = self.config.gcp.dataset
 
@@ -71,8 +83,8 @@ class BigQueryLoader:
         else:
             uris = [gcs_uri]
 
-        job_config = bigquery.LoadJobConfig(
-            source_format=bigquery.SourceFormat.PARQUET,
+        job_config = self._bigquery.LoadJobConfig(
+            source_format=self._bigquery.SourceFormat.PARQUET,
             write_disposition=entity_config["mode"],
         )
 
@@ -123,7 +135,7 @@ class BigQueryLoader:
 
         try:
             table = self.client.get_table(table_id)
-        except NotFound:
+        except self._not_found_error:
             return 0
 
         columns = [field.name for field in table.schema]
@@ -171,9 +183,9 @@ class BigQueryLoader:
             f"{self.config.gcp.project_id}.{self.dataset}."
             f"load_staging_{entity}_{uuid4().hex}"
         )
-        staging_config = bigquery.LoadJobConfig(
-            source_format=bigquery.SourceFormat.PARQUET,
-            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        staging_config = self._bigquery.LoadJobConfig(
+            source_format=self._bigquery.SourceFormat.PARQUET,
+            write_disposition=self._bigquery.WriteDisposition.WRITE_TRUNCATE,
         )
 
         load_job = self.client.load_table_from_uri(
@@ -194,7 +206,7 @@ class BigQueryLoader:
 
             try:
                 self.client.get_table(table_id)
-            except NotFound:
+            except self._not_found_error:
                 create_sql = f"""
                 CREATE TABLE `{table_id}` AS
                 {source_query}
