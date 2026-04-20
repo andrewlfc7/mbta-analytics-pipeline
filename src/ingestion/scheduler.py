@@ -28,10 +28,10 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def try_load(entity: str) -> None:
+def try_load(entity: str, parquet_path: str | None = None) -> None:
     """Attempt to load into DuckDB. Non-fatal if locked."""
     try:
-        DuckDBLoader().load_parquet(entity)
+        DuckDBLoader().load_parquet(entity, parquet_path=parquet_path)
     except Exception as e:
         if "lock" in str(e).lower():
             logger.warning("db_locked_skipping_load", entity=entity)
@@ -46,15 +46,15 @@ def run_dimensions():
     for ExtractorClass in [RoutesExtractor, StopsExtractor, TripsExtractor, SchedulesExtractor]:
         try:
             with ExtractorClass() as extractor:
-                extractor.run()
-            try_load(ExtractorClass().entity_name)
+                path = extractor.run()
+                try_load(extractor.entity_name, path)
         except Exception as e:
             logger.error("dimension_failed", entity=ExtractorClass.__name__, error=str(e))
 
     try:
         with WeatherExtractor() as extractor:
-            extractor.run()
-        try_load("weather")
+            path = extractor.run()
+        try_load("weather", path)
     except Exception as e:
         logger.error("weather_failed", error=str(e))
 
@@ -65,8 +65,8 @@ def run_predictions():
     """Extract predictions (every 5 min)."""
     try:
         with PredictionsExtractor() as extractor:
-            extractor.run()
-        try_load("predictions")
+            path = extractor.run()
+        try_load("predictions", path)
         logger.info("predictions_complete", time=now_utc())
     except Exception as e:
         logger.error("predictions_failed", error=str(e))
@@ -76,8 +76,8 @@ def run_vehicles():
     """Extract vehicles (every 5 min)."""
     try:
         with VehiclesExtractor() as extractor:
-            extractor.run()
-        try_load("vehicles")
+            path = extractor.run()
+        try_load("vehicles", path)
         logger.info("vehicles_complete", time=now_utc())
     except Exception as e:
         logger.error("vehicles_failed", error=str(e))
@@ -87,8 +87,8 @@ def run_alerts():
     """Extract alerts (every 15 min)."""
     try:
         with AlertsExtractor() as extractor:
-            extractor.run()
-        try_load("alerts")
+            path = extractor.run()
+        try_load("alerts", path)
         logger.info("alerts_complete", time=now_utc())
     except Exception as e:
         logger.error("alerts_failed", error=str(e))

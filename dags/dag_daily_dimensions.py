@@ -32,13 +32,13 @@ def extract_and_load(extractor_class_path: str, entity: str):
     if config.is_local:
         from src.loaders.duckdb_loader import DuckDBLoader
 
-        rows = DuckDBLoader().load_parquet(entity)
+        rows = DuckDBLoader().load_parquet(entity, parquet_path=path)
     else:
         from src.loaders.bigquery_loader import BigQueryLoader
         from src.loaders.gcs_loader import GCSLoader
 
-        GCSLoader().upload_entity(entity)
-        rows = BigQueryLoader().load_from_gcs(entity)
+        gcs_uri = GCSLoader().upload_parquet(path)
+        rows = BigQueryLoader().load_from_gcs(entity, gcs_uri)
 
     return {"entity": entity, "path": path, "rows": rows}
 
@@ -56,13 +56,13 @@ def extract_weather():
     if config.is_local:
         from src.loaders.duckdb_loader import DuckDBLoader
 
-        rows = DuckDBLoader().load_parquet("weather")
+        rows = DuckDBLoader().load_parquet("weather", parquet_path=path)
     else:
         from src.loaders.bigquery_loader import BigQueryLoader
         from src.loaders.gcs_loader import GCSLoader
 
-        GCSLoader().upload_entity("weather")
-        rows = BigQueryLoader().load_from_gcs("weather")
+        gcs_uri = GCSLoader().upload_parquet(path)
+        rows = BigQueryLoader().load_from_gcs("weather", gcs_uri)
 
     return {"entity": "weather", "path": path, "rows": rows}
 
@@ -71,7 +71,7 @@ with DAG(
     dag_id="daily_dimensions",
     default_args=default_args,
     description="Extract and load MBTA dimension tables daily",
-    schedule_interval="0 6 * * *",
+    schedule_interval="30 6 * * *",
     start_date=datetime(2025, 1, 1),
     max_active_runs=1,
     max_active_tasks=2,

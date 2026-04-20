@@ -1,5 +1,8 @@
 """BigQuery loader — loads parquet from GCS into BigQuery tables."""
 
+from uuid import uuid4
+
+from google.api_core.exceptions import NotFound
 from google.cloud import bigquery, storage
 
 from src.config import AppConfig, get_config
@@ -18,6 +21,12 @@ class BigQueryLoader:
         "vehicles": {"table": "raw_vehicles", "mode": "WRITE_APPEND"},
         "alerts": {"table": "raw_alerts", "mode": "WRITE_APPEND"},
         "weather": {"table": "raw_weather", "mode": "WRITE_TRUNCATE"},
+    }
+
+    DEDUPE_KEYS = {
+        "predictions": ["prediction_id", "extracted_at"],
+        "vehicles": ["vehicle_id", "extracted_at"],
+        "alerts": ["alert_id", "extracted_at"],
     }
 
     def __init__(self, config: AppConfig | None = None) -> None:
@@ -74,6 +83,9 @@ class BigQueryLoader:
             files=len(uris),
         )
 
+        if entity_config["mode"] == "WRITE_APPEND" and entity in self.DEDUPE_KEYS:
+            return self._merge_from_uris(entity, uris, table_id)
+
         load_job = self.client.load_table_from_uri(
             uris, table_id, job_config=job_config
         )
@@ -82,6 +94,134 @@ class BigQueryLoader:
         table = self.client.get_table(table_id)
         self.logger.info("loaded", entity=entity, table=table_id, rows=table.num_rows)
         return table.num_rows
+
+    @staticmethod
+    def _quote_identifier(identifier: str) -> str:
+        return f"`{identifier.replace('`', '``')}`"
+
+    def _deduped_source_query(self, staging_table_id: str, keys: list[str]) -> str:
+        key_list = ", ".join(self._quote_identifier(key) for key in keys)
+        return f"""
+            SELECT * EXCEPT(_dedupe_rank)
+            FROM (
+              SELECT
+                *,
+                ROW_NUMBER() OVER (
+                  PARTITION BY {key_list}
+                  ORDER BY {key_list}
+                ) AS _dedupe_rank
+              FROM `{staging_table_id}`
+            )
+            WHERE _dedupe_rank = 1
+            """
+
+    def _dedupe_existing_table(self, entity: str, table_id: str) -> int:
+        """Remove duplicate raw fact rows already present in a BigQuery table."""
+        keys = self.DEDUPE_KEYS.get(entity)
+        if not keys:
+            return self.client.get_table(table_id).num_rows
+
+        try:
+            table = self.client.get_table(table_id)
+        except NotFound:
+            return 0
+
+        columns = [field.name for field in table.schema]
+        if not all(key in columns for key in keys):
+            return table.num_rows
+
+        deduped_table_id = (
+            f"{self.config.gcp.project_id}.{self.dataset}."
+            f"dedupe_{entity}_{uuid4().hex}"
+        )
+        source_query = self._deduped_source_query(table_id, keys)
+
+        try:
+            self.client.query(
+                f"""
+                CREATE TABLE `{deduped_table_id}` AS
+                {source_query}
+                """
+            ).result()
+            self.client.query(
+                f"""
+                CREATE OR REPLACE TABLE `{table_id}` AS
+                SELECT * FROM `{deduped_table_id}`
+                """
+            ).result()
+        finally:
+            self.client.delete_table(deduped_table_id, not_found_ok=True)
+
+        table = self.client.get_table(table_id)
+        self.logger.info("deduped", entity=entity, table=table_id, rows=table.num_rows)
+        return table.num_rows
+
+    def dedupe_entity(self, entity: str) -> int:
+        """Remove duplicate rows from an existing raw append table."""
+        if entity not in self.ENTITIES:
+            raise ValueError(f"Unknown entity: {entity}")
+
+        entity_config = self.ENTITIES[entity]
+        table_id = f"{self.config.gcp.project_id}.{self.dataset}.{entity_config['table']}"
+        return self._dedupe_existing_table(entity, table_id)
+
+    def _merge_from_uris(self, entity: str, uris: list[str], table_id: str) -> int:
+        """Load fact files through a staging table, then insert only unseen rows."""
+        staging_table_id = (
+            f"{self.config.gcp.project_id}.{self.dataset}."
+            f"load_staging_{entity}_{uuid4().hex}"
+        )
+        staging_config = bigquery.LoadJobConfig(
+            source_format=bigquery.SourceFormat.PARQUET,
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        )
+
+        load_job = self.client.load_table_from_uri(
+            uris, staging_table_id, job_config=staging_config
+        )
+
+        try:
+            load_job.result()
+            staging_table = self.client.get_table(staging_table_id)
+            columns = [field.name for field in staging_table.schema]
+            keys = self.DEDUPE_KEYS[entity]
+
+            if not all(key in columns for key in keys):
+                missing = [key for key in keys if key not in columns]
+                raise ValueError(f"Missing dedupe key columns for {entity}: {missing}")
+
+            source_query = self._deduped_source_query(staging_table_id, keys)
+
+            try:
+                self.client.get_table(table_id)
+            except NotFound:
+                create_sql = f"""
+                CREATE TABLE `{table_id}` AS
+                {source_query}
+                """
+                self.client.query(create_sql).result()
+            else:
+                column_list = ", ".join(self._quote_identifier(col) for col in columns)
+                value_list = ", ".join(f"S.{self._quote_identifier(col)}" for col in columns)
+                join_predicates = " AND ".join(
+                    f"T.{self._quote_identifier(key)} = S.{self._quote_identifier(key)}"
+                    for key in keys
+                )
+                merge_sql = f"""
+                MERGE `{table_id}` AS T
+                USING ({source_query}) AS S
+                ON {join_predicates}
+                WHEN NOT MATCHED THEN
+                  INSERT ({column_list})
+                  VALUES ({value_list})
+                """
+                self.client.query(merge_sql).result()
+
+            row_count = self._dedupe_existing_table(entity, table_id)
+            self.logger.info("merged", entity=entity, table=table_id, rows=row_count)
+            return row_count
+        finally:
+            self.client.delete_table(staging_table_id, not_found_ok=True)
 
     def load_all(self) -> dict[str, int]:
         """Load all entities from GCS into BigQuery."""

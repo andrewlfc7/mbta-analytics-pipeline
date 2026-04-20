@@ -1,10 +1,12 @@
+{% set timestamp_col = '`timestamp`' if target.type == 'bigquery' else '"timestamp"' %}
+
 with source as (
     select * from {{ source('raw_mbta', 'raw_weather') }}
 ),
 
 cleaned as (
     select
-        {{ parse_ts('`timestamp`') }} as weather_timestamp,
+        {{ parse_ts(timestamp_col) }} as weather_timestamp,
         temperature_2m as temperature_f,
         relative_humidity_2m as humidity_pct,
         precipitation as precipitation_mm,
@@ -27,7 +29,7 @@ cleaned as (
             else 'Unknown'
         end as weather_condition
     from source
-    where `timestamp` is not null
+    where {{ timestamp_col }} is not null
 )
 
 select * from cleaned

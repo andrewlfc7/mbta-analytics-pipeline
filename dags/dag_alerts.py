@@ -27,13 +27,13 @@ def extract_alerts():
     if config.is_local:
         from src.loaders.duckdb_loader import DuckDBLoader
 
-        rows = DuckDBLoader().load_parquet("alerts")
+        rows = DuckDBLoader().load_parquet("alerts", parquet_path=path)
     else:
         from src.loaders.bigquery_loader import BigQueryLoader
         from src.loaders.gcs_loader import GCSLoader
 
-        GCSLoader().upload_entity("alerts")
-        rows = BigQueryLoader().load_from_gcs("alerts")
+        gcs_uri = GCSLoader().upload_parquet(path)
+        rows = BigQueryLoader().load_from_gcs("alerts", gcs_uri)
 
     return {"entity": "alerts", "path": path, "rows": rows}
 

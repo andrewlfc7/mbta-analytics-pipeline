@@ -32,13 +32,13 @@ def extract_and_load(extractor_class_path: str, entity: str):
     if config.is_local:
         from src.loaders.duckdb_loader import DuckDBLoader
 
-        rows = DuckDBLoader().load_parquet(entity)
+        rows = DuckDBLoader().load_parquet(entity, parquet_path=path)
     else:
         from src.loaders.bigquery_loader import BigQueryLoader
         from src.loaders.gcs_loader import GCSLoader
 
-        GCSLoader().upload_entity(entity)
-        rows = BigQueryLoader().load_from_gcs(entity)
+        gcs_uri = GCSLoader().upload_parquet(path)
+        rows = BigQueryLoader().load_from_gcs(entity, gcs_uri)
 
     return {"entity": entity, "path": path, "rows": rows}
 

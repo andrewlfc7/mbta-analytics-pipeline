@@ -26,7 +26,19 @@
   {% if target.type == 'bigquery' %}
     APPROX_QUANTILES({{ col }}, 100)[OFFSET({{ (pct * 100) | int }})]
   {% else %}
-    percentile_cont({{ pct }}) within group (order by {{ col }})
+    quantile_cont({{ col }}, {{ pct }})
+  {% endif %}
+{% endmacro %}
+
+{% macro timestamp_diff_seconds(start_col, end_col) %}
+  {% if target.type == 'bigquery' %}
+    cast(TIMESTAMP_DIFF(cast({{ end_col }} as timestamp), cast({{ start_col }} as timestamp), SECOND) as int64)
+  {% else %}
+    cast(
+      extract(epoch from cast({{ end_col }} as timestamp))
+      - extract(epoch from cast({{ start_col }} as timestamp))
+      as bigint
+    )
   {% endif %}
 {% endmacro %}
 

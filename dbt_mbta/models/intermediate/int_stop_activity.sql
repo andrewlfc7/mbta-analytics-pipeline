@@ -20,6 +20,7 @@ with vehicles as (
         extracted_at,
         {{ dbt.date_trunc('hour', 'extracted_at') }} as activity_hour
     from {{ ref('stg_vehicles') }}
+    where stop_id is not null
 ),
 
 stops as (

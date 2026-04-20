@@ -1,6 +1,6 @@
 {{
     config(
-        materialized='view'
+        materialized='table'
     )
 }}
 
@@ -23,6 +23,7 @@ with predictions as (
         vehicle_id,
         extracted_at
     from {{ ref('stg_predictions') }}
+    where coalesce(predicted_arrival, predicted_departure) is not null
 ),
 
 schedules as (
@@ -59,14 +60,7 @@ with_delay as (
     select
         p.prediction_id,
         p.route_id,
-        r.route_name,
-        r.route_type,
-        r.route_type_desc,
         p.stop_id,
-        s.stop_name,
-        s.municipality,
-        s.latitude,
-        s.longitude,
         p.trip_id,
         p.vehicle_id,
         p.direction_id,
@@ -83,14 +77,15 @@ with_delay as (
         p.arrival_uncertainty,
         p.departure_uncertainty,
 
-        -- Delay computation
         case
             when p.predicted_arrival is not null and sch.scheduled_arrival is not null then
-                {{ datediff('sch.scheduled_arrival', 'p.predicted_arrival', 'second') }}
+                {{ timestamp_diff_seconds('sch.scheduled_arrival', 'p.predicted_arrival') }}
+        end as arrival_delay_seconds,
+
+        case
             when p.predicted_departure is not null and sch.scheduled_departure is not null then
-                {{ datediff('sch.scheduled_departure', 'p.predicted_departure', 'second') }}
-            else null
-        end as delay_seconds,
+                {{ timestamp_diff_seconds('sch.scheduled_departure', 'p.predicted_departure') }}
+        end as departure_delay_seconds,
 
         p.schedule_relationship,
         p.status,
@@ -103,12 +98,31 @@ with_delay as (
     left join schedules sch
         on p.trip_id = sch.trip_id
         and p.stop_id = sch.stop_id
+),
 
-    left join routes r
-        on p.route_id = r.route_id
-
-    left join stops s
-        on p.stop_id = s.stop_id
+normalized as (
+    select
+        prediction_id,
+        route_id,
+        stop_id,
+        trip_id,
+        vehicle_id,
+        direction_id,
+        stop_sequence,
+        scheduled_arrival,
+        scheduled_departure,
+        timepoint,
+        predicted_arrival,
+        predicted_departure,
+        arrival_uncertainty,
+        departure_uncertainty,
+        coalesce(arrival_delay_seconds, departure_delay_seconds) as delay_seconds,
+        schedule_relationship,
+        status,
+        revenue,
+        update_type,
+        extracted_at
+    from with_delay
 ),
 
 classified as (
@@ -129,7 +143,48 @@ classified as (
         case when delay_seconds > 60 then true else false end as is_late,
         case when delay_seconds > 300 then true else false end as is_significantly_late
 
-    from with_delay
+    from normalized
+),
+
+enriched as (
+    select
+        c.prediction_id,
+        c.route_id,
+        r.route_name,
+        r.route_type,
+        r.route_type_desc,
+        c.stop_id,
+        s.stop_name,
+        s.municipality,
+        s.latitude,
+        s.longitude,
+        c.trip_id,
+        c.vehicle_id,
+        c.direction_id,
+        c.stop_sequence,
+        c.scheduled_arrival,
+        c.scheduled_departure,
+        c.timepoint,
+        c.predicted_arrival,
+        c.predicted_departure,
+        c.arrival_uncertainty,
+        c.departure_uncertainty,
+        c.delay_seconds,
+        c.schedule_relationship,
+        c.status,
+        c.revenue,
+        c.update_type,
+        c.extracted_at,
+        c.delay_category,
+        c.is_late,
+        c.is_significantly_late
+    from classified c
+
+    left join routes r
+        on c.route_id = r.route_id
+
+    left join stops s
+        on c.stop_id = s.stop_id
 )
 
-select * from classified
+select * from enriched

@@ -37,6 +37,38 @@ cleaned as (
         cast(extracted_at as timestamp) as extracted_at
     from source
     where alert_id is not null
+),
+
+deduped as (
+    select
+        *,
+        row_number() over (
+            partition by alert_id
+            order by coalesce(updated_at, extracted_at) desc, extracted_at desc
+        ) as _dedupe_rank
+    from cleaned
 )
 
-select * from cleaned
+select
+    alert_id,
+    cause,
+    effect,
+    severity,
+    lifecycle,
+    header,
+    description,
+    short_header,
+    service_effect,
+    duration_certainty,
+    active_start,
+    active_end,
+    created_at,
+    updated_at,
+    closed_timestamp,
+    url,
+    affected_routes,
+    affected_stops,
+    informed_entity_count,
+    extracted_at
+from deduped
+where _dedupe_rank = 1

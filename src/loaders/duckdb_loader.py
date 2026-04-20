@@ -27,6 +27,12 @@ class DuckDBLoader:
         "weather": {"table": "raw_weather", "mode": "replace"},
     }
 
+    DEDUPE_KEYS = {
+        "predictions": ["prediction_id", "extracted_at"],
+        "vehicles": ["vehicle_id", "extracted_at"],
+        "alerts": ["alert_id", "extracted_at"],
+    }
+
     def __init__(self, config: AppConfig | None = None) -> None:
         self.config = config or get_config()
         self.logger = get_logger(self.__class__.__name__)
@@ -43,6 +49,93 @@ class DuckDBLoader:
         """Create raw_mbta schema if it doesn't exist."""
         conn.execute("CREATE SCHEMA IF NOT EXISTS raw_mbta")
 
+    @staticmethod
+    def _quote_identifier(identifier: str) -> str:
+        return f'"{identifier.replace(chr(34), chr(34) * 2)}"'
+
+    def _query_columns(self, conn: duckdb.DuckDBPyConnection, query: str) -> list[str]:
+        """Return column names produced by a query."""
+        return [row[0] for row in conn.execute(f"DESCRIBE {query}").fetchall()]
+
+    def _table_columns(self, conn: duckdb.DuckDBPyConnection, table_name: str) -> list[str]:
+        """Return column names in an existing table."""
+        return [row[0] for row in conn.execute(f"DESCRIBE {table_name}").fetchall()]
+
+    def _dedupe_existing_table(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        entity: str,
+        table_name: str,
+    ) -> int:
+        """Remove duplicate raw fact rows by entity key and extraction timestamp."""
+        dedupe_keys = self.DEDUPE_KEYS.get(entity)
+        if not dedupe_keys:
+            return conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+
+        columns = self._table_columns(conn, table_name)
+        if not all(key in columns for key in dedupe_keys):
+            return conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+
+        column_list = ", ".join(self._quote_identifier(col) for col in columns)
+        key_list = ", ".join(self._quote_identifier(key) for key in dedupe_keys)
+
+        before_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+        conn.execute(
+            f"""
+            CREATE OR REPLACE TABLE {table_name} AS
+            SELECT {column_list}
+            FROM (
+                SELECT
+                    *,
+                    row_number() OVER (
+                        PARTITION BY {key_list}
+                        ORDER BY {key_list}
+                    ) AS _dedupe_rank
+                FROM {table_name}
+            )
+            WHERE _dedupe_rank = 1
+            """
+        )
+        after_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+
+        if before_count != after_count:
+            self.logger.info(
+                "deduped",
+                entity=entity,
+                table=table_name,
+                removed=before_count - after_count,
+                rows=after_count,
+            )
+
+        return after_count
+
+    def dedupe_entity(self, entity: str) -> int:
+        """Remove duplicate rows from an existing raw append table."""
+        if entity not in self.ENTITIES:
+            valid = list(self.ENTITIES.keys())
+            raise ValueError(f"Unknown entity: {entity}. Expected one of {valid}")
+
+        table = self.ENTITIES[entity]["table"]
+        table_name = f"raw_mbta.{table}"
+
+        conn = self.get_connection()
+        try:
+            self._create_schema(conn)
+            table_exists = conn.execute(
+                """
+                SELECT count(*) FROM information_schema.tables
+                WHERE table_schema = 'raw_mbta'
+                  AND table_name = ?
+                """,
+                [table],
+            ).fetchone()[0] > 0
+
+            if not table_exists:
+                return 0
+
+            return self._dedupe_existing_table(conn, entity, table_name)
+        finally:
+            conn.close()
 
     def load_parquet(
         self,
@@ -75,13 +168,13 @@ class DuckDBLoader:
                 try:
                     self._create_schema(conn)
 
-
                     if mode == "replace":
                         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
                         conn.execute(
                             f"CREATE TABLE {table_name} AS "
                             f"SELECT * FROM read_parquet({source}, union_by_name=true)"
                         )
+                        row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
                     elif mode == "append":
                         table_exists = conn.execute(
                             f"""
@@ -94,17 +187,64 @@ class DuckDBLoader:
                         if not table_exists:
                             conn.execute(
                                 f"CREATE TABLE {table_name} AS "
-                                f"SELECT * FROM read_parquet({source}, union_by_name=true)"
+                                f"SELECT DISTINCT * FROM read_parquet({source}, union_by_name=true)"
                             )
                         else:
-                            conn.execute(
-                                f"INSERT INTO {table_name} "
-                                f"SELECT * FROM read_parquet({source}, union_by_name=true)"
+                            source_query = (
+                                f"SELECT DISTINCT * "
+                                f"FROM read_parquet({source}, union_by_name=true)"
+                            )
+                            source_columns = self._query_columns(conn, source_query)
+                            target_columns = self._table_columns(conn, table_name)
+                            insert_columns = [c for c in target_columns if c in source_columns]
+
+                            if not insert_columns:
+                                raise ValueError(f"No loadable columns found for {entity}")
+
+                            dedupe_keys = self.DEDUPE_KEYS.get(entity, [])
+                            can_dedupe = all(
+                                key in source_columns and key in target_columns
+                                for key in dedupe_keys
                             )
 
+                            quoted_insert_columns = ", ".join(
+                                self._quote_identifier(c) for c in insert_columns
+                            )
+                            source_select = ", ".join(
+                                f"source.{self._quote_identifier(c)}" for c in insert_columns
+                            )
 
+                            if can_dedupe:
+                                join_predicates = " AND ".join(
+                                    f"target.{self._quote_identifier(key)} = "
+                                    f"source.{self._quote_identifier(key)}"
+                                    for key in dedupe_keys
+                                )
+                                conn.execute(
+                                    f"""
+                                    INSERT INTO {table_name} ({quoted_insert_columns})
+                                    SELECT {source_select}
+                                    FROM ({source_query}) AS source
+                                    WHERE NOT EXISTS (
+                                        SELECT 1
+                                        FROM {table_name} AS target
+                                        WHERE {join_predicates}
+                                    )
+                                    """
+                                )
+                            else:
+                                conn.execute(
+                                    f"""
+                                    INSERT INTO {table_name} ({quoted_insert_columns})
+                                    SELECT {source_select}
+                                    FROM ({source_query}) AS source
+                                    """
+                                )
 
-                    row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+                        row_count = self._dedupe_existing_table(conn, entity, table_name)
+                    else:
+                        row_count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
+
                     self.logger.info(
                         "loaded",
                         entity=entity,
@@ -130,7 +270,6 @@ class DuckDBLoader:
                     raise
 
         return 0
-
 
     def load_all(self) -> dict[str, int]:
         """Load all entities from raw parquet files into DuckDB."""

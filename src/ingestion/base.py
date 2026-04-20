@@ -1,7 +1,7 @@
 """Base extractor class for MBTA API ingestion."""
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -156,8 +156,11 @@ class BaseExtractor(ABC):
 
     def run(self, dt: datetime | None = None) -> str:
         """Full extraction pipeline: extract → transform → save."""
+        dt = dt or datetime.now(UTC)
         records = self.extract()
         df = self.to_dataframe(records)
+        if "extracted_at" in df.columns:
+            df = df.with_columns(pl.lit(dt.isoformat()).cast(pl.Utf8).alias("extracted_at"))
         return self.save(df, dt)
 
     def close(self) -> None:

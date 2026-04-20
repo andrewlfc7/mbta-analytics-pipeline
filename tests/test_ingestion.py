@@ -94,11 +94,19 @@ class TestPartitioning:
 
         dt = datetime(2025, 6, 20, 14, 30)
         path = get_fact_path("./data/raw", "predictions", dt)
-        assert path == "data/raw/predictions/dt=2025-06-20/hr=14/predictions.parquet"
+        assert (
+            path
+            == "data/raw/predictions/dt=2025-06-20/hr=14/"
+            "extracted_at=20250620T143000Z/predictions.parquet"
+        )
 
     def test_fact_path_midnight(self):
         from src.utils.partitioning import get_fact_path
 
         dt = datetime(2025, 6, 20, 0, 5)
         path = get_fact_path("./data/raw", "vehicles", dt)
-        assert path == "data/raw/vehicles/dt=2025-06-20/hr=00/vehicles.parquet"
+        assert (
+            path
+            == "data/raw/vehicles/dt=2025-06-20/hr=00/"
+            "extracted_at=20250620T000500Z/vehicles.parquet"
+        )
