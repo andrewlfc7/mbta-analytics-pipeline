@@ -38,7 +38,6 @@ jobs:
         run: |
           gcloud config set project "${{ secrets.GCP_PROJECT_ID }}"
 
-
       - name: Deploy on VM with gcloud ssh
         run: |
           gcloud compute ssh "${{ secrets.GCP_INSTANCE_NAME }}" \
@@ -50,5 +49,6 @@ jobs:
               git fetch origin && \
               git reset --hard origin/master && \
               cp /tmp/.env.backup .env 2>/dev/null || true && \
+              sudo docker compose down -v && \
               sudo docker compose up -d --build && \
               sudo docker image prune -f"

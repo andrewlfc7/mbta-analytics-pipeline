@@ -10,10 +10,18 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
-    # Resource Optimizations for e2-medium
-    AIRFLOW__WEBSERVER__WORKERS: 2
-    AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: 300
-    AIRFLOW__CORE__DAG_PARSING_INTERVAL: 60
+
+    # === RESOURCE LIMITS ===
+    AIRFLOW__CORE__PARALLELISM: '4'
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: '2'
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: '1'
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: '60'
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '60'
+    AIRFLOW__SCHEDULER__PARSING_PROCESSES: '1'
+    AIRFLOW__WEBSERVER__WORKERS: '1'
+    AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: '300'
+
+    # === App Config ===
     MBTA_ENV: gcp
     MBTA_API_KEY: ${MBTA_API_KEY}
     GCP_PROJECT_ID: server-i3
@@ -35,7 +43,7 @@ x-airflow-common: &airflow-common
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -66,11 +74,11 @@ services:
           --lastname User \
           --role Admin \
           --email admin@example.com \
-          --password admin
+          --password admin || true
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 512M
     restart: "no"
 
   airflow-webserver:
@@ -80,14 +88,14 @@ services:
       - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 120s
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 768M
     restart: always
 
   airflow-scheduler:
@@ -95,10 +103,10 @@ services:
     command: airflow scheduler
     healthcheck:
       test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $$(hostname)"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 120s
     deploy:
       resources:
         limits:

@@ -23,6 +23,9 @@ with DAG(
     description="Run dbt staging → intermediate → mart transformations",
     schedule_interval="0 * * * *",
     start_date=datetime(2025, 1, 1),
+    max_active_runs=1,
+    max_active_tasks=2,
+    dagrun_timeout=timedelta(minutes=20),
     catchup=False,
     tags=["mbta", "dbt", "transforms"],
 ) as dag:

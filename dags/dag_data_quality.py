@@ -131,6 +131,9 @@ with DAG(
     description="Daily data quality and freshness checks",
     schedule_interval="0 7 * * *",
     start_date=datetime(2025, 1, 1),
+    max_active_runs=1,
+    max_active_tasks=1,
+    dagrun_timeout=timedelta(minutes=15),
     catchup=False,
     tags=["mbta", "quality"],
 ) as dag:

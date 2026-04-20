@@ -73,6 +73,9 @@ with DAG(
     description="Extract and load MBTA dimension tables daily",
     schedule_interval="0 6 * * *",
     start_date=datetime(2025, 1, 1),
+    max_active_runs=1,
+    max_active_tasks=2,
+    dagrun_timeout=timedelta(minutes=30),
     catchup=False,
     tags=["mbta", "dimensions", "daily"],
 ) as dag:

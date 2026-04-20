@@ -49,6 +49,9 @@ with DAG(
     description="Extract real-time predictions and vehicle positions",
     schedule_interval="*/5 * * * *",
     start_date=datetime(2025, 1, 1),
+    max_active_runs=1,
+    max_active_tasks=2,
+    dagrun_timeout=timedelta(minutes=4),
     catchup=False,
     tags=["mbta", "facts", "realtime"],
 ) as dag:
