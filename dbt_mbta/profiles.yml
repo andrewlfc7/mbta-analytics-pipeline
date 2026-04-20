@@ -16,6 +16,6 @@ mbta_analytics:
       method: service-account
       project: server-i3
       dataset: raw_mbta
-      keyfile: /home/Drew/mbta-sa-key.json
+      keyfile: /opt/airflow/keys/mbta-sa-key.json
       threads: 4
       location: US
