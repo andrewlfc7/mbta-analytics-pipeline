@@ -12,7 +12,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
 
     # === RESOURCE LIMITS ===
-    AIRFLOW__CORE__PARALLELISM: '4'
+    AIRFLOW__CORE__PARALLELISM: '2'
     AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: '2'
     AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: '1'
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: '60'
@@ -95,7 +95,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 512M
     restart: always
 
   airflow-scheduler:
@@ -110,7 +110,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 2048M
     restart: always
 
 volumes:

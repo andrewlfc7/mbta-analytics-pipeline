@@ -21,7 +21,7 @@ with DAG(
     dag_id="dbt_transforms",
     default_args=default_args,
     description="Run dbt staging → intermediate → mart transformations",
-    schedule_interval="0 * * * *",
+    schedule_interval="10 * * * *",
     start_date=datetime(2025, 1, 1),
     max_active_runs=1,
     max_active_tasks=2,
