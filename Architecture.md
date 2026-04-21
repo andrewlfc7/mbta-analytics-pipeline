@@ -100,7 +100,7 @@
 │  ├── relationships (FK integrity)             │
 │  └── custom: valid delay range, no future ts  │
 │                                               │
-│  Great Expectations                           │
+│   QUALITY checks                              │
 │  ├── raw layer expectations                   │
 │  │   (schema shape, column types, row counts) │
 │  ├── freshness checks                         │
