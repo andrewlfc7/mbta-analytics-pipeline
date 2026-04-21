@@ -14,24 +14,25 @@ with base as (
         stop_id,
         stop_name,
         direction_id,
+        service_date,
         delay_seconds,
         delay_category,
         is_late,
         is_significantly_late,
         extracted_at,
 
-        -- Time dimensions
-        extract(hour from extracted_at) as hour_of_day,
-        {{ get_day_of_week('extracted_at') }} as day_of_week,
+        -- Time dimensions from predicted/scheduled time
+        extract(hour from coalesce(predicted_arrival, predicted_departure)) as hour_of_day,
+        {{ get_day_of_week('service_date') }} as day_of_week,
         case
-            when {{ is_weekend('extracted_at') }} then 'weekend'
+            when {{ is_weekend('service_date') }} then 'weekend'
             else 'weekday'
         end as day_type,
         case
-            when extract(hour from extracted_at) between 6 and 9 then 'morning_rush'
-            when extract(hour from extracted_at) between 10 and 15 then 'midday'
-            when extract(hour from extracted_at) between 16 and 19 then 'evening_rush'
-            when extract(hour from extracted_at) between 20 and 23 then 'evening'
+            when extract(hour from coalesce(predicted_arrival, predicted_departure)) between 6 and 9 then 'morning_rush'
+            when extract(hour from coalesce(predicted_arrival, predicted_departure)) between 10 and 15 then 'midday'
+            when extract(hour from coalesce(predicted_arrival, predicted_departure)) between 16 and 19 then 'evening_rush'
+            when extract(hour from coalesce(predicted_arrival, predicted_departure)) between 20 and 23 then 'evening'
             else 'overnight'
         end as time_period
 

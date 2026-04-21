@@ -21,7 +21,17 @@ with predictions as (
         stop_id,
         trip_id,
         vehicle_id,
-        extracted_at
+        extracted_at,
+        -- Extract the service date from the predicted time
+        -- Predictions come in UTC; MBTA service day runs ~5AM-2AM EDT
+        -- Convert to EDT (UTC-4) before extracting date so late-night
+        -- trips land on the correct service day
+        DATE(
+            TIMESTAMP_SUB(
+                coalesce(predicted_arrival, predicted_departure),
+                INTERVAL 4 HOUR
+            )
+        ) as service_date
     from {{ ref('stg_predictions') }}
     where coalesce(predicted_arrival, predicted_departure) is not null
 ),
@@ -33,7 +43,14 @@ schedules as (
         scheduled_arrival,
         scheduled_departure,
         stop_sequence,
-        timepoint
+        timepoint,
+        -- Same logic: convert schedule times to EDT before extracting date
+        DATE(
+            TIMESTAMP_SUB(
+                coalesce(scheduled_arrival, scheduled_departure),
+                INTERVAL 4 HOUR
+            )
+        ) as service_date
     from {{ ref('stg_schedules') }}
 ),
 
@@ -65,6 +82,7 @@ with_delay as (
         p.vehicle_id,
         p.direction_id,
         p.stop_sequence,
+        p.service_date,
 
         -- Scheduled times
         sch.scheduled_arrival,
@@ -77,6 +95,7 @@ with_delay as (
         p.arrival_uncertainty,
         p.departure_uncertainty,
 
+        -- Delay calculation
         case
             when p.predicted_arrival is not null and sch.scheduled_arrival is not null then
                 {{ timestamp_diff_seconds('sch.scheduled_arrival', 'p.predicted_arrival') }}
@@ -98,6 +117,8 @@ with_delay as (
     left join schedules sch
         on p.trip_id = sch.trip_id
         and p.stop_id = sch.stop_id
+        -- KEY FIX: only match predictions to same service day schedules
+        and p.service_date = sch.service_date
 ),
 
 normalized as (
@@ -109,6 +130,7 @@ normalized as (
         vehicle_id,
         direction_id,
         stop_sequence,
+        service_date,
         scheduled_arrival,
         scheduled_departure,
         timepoint,
@@ -144,6 +166,10 @@ classified as (
         case when delay_seconds > 300 then true else false end as is_significantly_late
 
     from normalized
+    -- Filter out rows where no schedule match was found
+    where delay_seconds is not null
+    -- Sanity check: delay should be reasonable (-30min to +60min)
+    and delay_seconds between -1800 and 3600
 ),
 
 enriched as (
@@ -162,6 +188,7 @@ enriched as (
         c.vehicle_id,
         c.direction_id,
         c.stop_sequence,
+        c.service_date,
         c.scheduled_arrival,
         c.scheduled_departure,
         c.timepoint,
