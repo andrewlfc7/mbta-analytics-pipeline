@@ -51,7 +51,7 @@ async def get_system_overview(request: Request):
 async def get_reliability_trend(
     request: Request,
     period: str = Query("30d"),
-    granularity: str = Query("daily", regex="^(daily|weekly)$"),
+    granularity: str = Query("daily", pattern="^(daily|weekly)$"),
 ):
     bq = request.app.state.bq_service
     period_days = int(period.replace("d", ""))

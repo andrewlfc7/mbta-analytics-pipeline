@@ -9,18 +9,11 @@ SELECT
     WHEN 7 THEN 'Saturday'
   END AS day_of_week,
   day_of_week AS day_num,
-  hour_of_day AS hour,
   ROUND(AVG(avg_delay_seconds) / 60.0, 1) AS avg_delay_minutes,
   ROUND(AVG(median_delay_seconds) / 60.0, 1) AS median_delay_minutes,
   SUM(prediction_count) AS trip_count,
   ROUND(AVG(late_pct), 1) AS pct_late
 FROM `{project}.marts.mart_delay_analysis`
-WHERE
-  ('@route_filter' = 'all' OR route_id = '@route_filter')
-  AND (
-    '@direction' = 'all'
-    OR ('@direction' = 'inbound' AND direction_id = 1)
-    OR ('@direction' = 'outbound' AND direction_id = 0)
-  )
-GROUP BY day_of_week, day_num, hour_of_day
-ORDER BY day_num, hour
+WHERE ('@route_filter' = 'all' OR route_id = '@route_filter')
+GROUP BY day_of_week
+ORDER BY day_num

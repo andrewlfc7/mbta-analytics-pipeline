@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-import os
 
 
 class Settings(BaseSettings):
@@ -13,26 +12,26 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # GCP / BigQuery
-    gcp_project_id: str = ""
-    bigquery_dataset: str = "mbta_analytics"
+    gcp_project_id: str = "server-i3"
     google_application_credentials: str = ""
 
     # Cache
-    cache_ttl_seconds: int = 300  # 5 minutes
+    cache_ttl_seconds: int = 300
     cache_dir: str = "/tmp/mbta_api_cache"
 
     # ML Model
     model_path: str = "ml/models/delay_predictor.joblib"
 
-    # CORS (for frontend)
+    # CORS
     cors_origins: list[str] = [
-        "http://localhost:3000",          # local next.js dev
-        "https://mbta-analytics.vercel.app",  # production
+        "http://localhost:3000",
+        "https://mbta-analytics.vercel.app",
     ]
 
     class Config:
         env_file = ".env"
         env_prefix = "MBTA_API_"
+        extra = "ignore"
 
 
 @lru_cache()

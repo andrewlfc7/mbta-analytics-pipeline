@@ -1,11 +1,7 @@
 from fastapi import APIRouter, Query, Request, HTTPException
-from typing import Optional
 import logging
 
-from api.models.heatmap import (
-    HeatmapResponse,
-    CellDetailResponse,
-)
+from api.models.heatmap import HeatmapResponse, CellDetailResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -15,31 +11,13 @@ router = APIRouter()
     "/heatmap",
     response_model=HeatmapResponse,
     summary="Delay heatmap by day of week and hour",
-    description="""
-    Returns average delay data in a day-of-week × hour-of-day matrix.
-    Each cell contains avg delay, median delay, trip count, % late,
-    and optionally ML predictions.
-    """,
 )
 async def get_delay_heatmap(
     request: Request,
-    route_id: str = Query(
-        "all", description="Route ID (e.g., Red, Blue, Green-B) or 'all'"
-    ),
-    period: str = Query(
-        "30d",
-        description="Lookback period",
-        regex="^(7d|14d|30d|60d|90d)$",
-    ),
-    direction: str = Query(
-        "all",
-        description="Direction filter",
-        regex="^(all|inbound|outbound)$",
-    ),
-    include_predictions: bool = Query(
-        False,
-        description="Include ML delay predictions per cell",
-    ),
+    route_id: str = Query("all", description="Route ID or 'all'"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|60d|90d)$"),
+    direction: str = Query("all", pattern="^(all|inbound|outbound)$"),
+    include_predictions: bool = Query(False),
 ):
     bq = request.app.state.bq_service
     period_days = int(period.replace("d", ""))
@@ -51,9 +29,7 @@ async def get_delay_heatmap(
     }
 
     try:
-        rows = await bq.query_from_file(
-            "heatmap_day_hour.sql", params=params
-        )
+        rows = await bq.query_from_file("heatmap_day_hour.sql", params=params)
     except Exception as e:
         logger.error(f"Heatmap query failed: {e}")
         raise HTTPException(status_code=500, detail="Query failed")
@@ -64,7 +40,7 @@ async def get_delay_heatmap(
             detail=f"No data found for route={route_id}, period={period}",
         )
 
-    # Calculate anomalies (>2x avg for that hour across all days)
+    # Calculate anomalies
     hour_avgs = {}
     for row in rows:
         hour = row["hour"]
@@ -72,19 +48,15 @@ async def get_delay_heatmap(
             hour_avgs[hour] = []
         hour_avgs[hour].append(row["avg_delay_minutes"])
 
-    hour_means = {
-        h: sum(vals) / len(vals) for h, vals in hour_avgs.items()
-    }
+    hour_means = {h: sum(vals) / len(vals) for h, vals in hour_avgs.items()}
 
     for row in rows:
         row["is_anomaly"] = (
             row["avg_delay_minutes"] > 2 * hour_means.get(row["hour"], 0)
         )
 
-    # Find worst and best cells
     worst = max(rows, key=lambda r: r["avg_delay_minutes"])
     best = min(rows, key=lambda r: r["avg_delay_minutes"])
-
     total_trips = sum(r["trip_count"] for r in rows)
 
     return HeatmapResponse(
@@ -116,7 +88,7 @@ async def get_cell_detail(
     request: Request,
     route_id: str = Query(..., description="Route ID"),
     day_of_week: str = Query(..., description="e.g., Monday"),
-    hour: int = Query(..., ge=0, le=23, description="Hour (0-23)"),
+    hour: int = Query(..., ge=0, le=23),
 ):
     bq = request.app.state.bq_service
 
@@ -127,15 +99,9 @@ async def get_cell_detail(
     }
 
     try:
-        stations = await bq.query_from_file(
-            "heatmap_cell_stations.sql", params=params
-        )
-        history = await bq.query_from_file(
-            "heatmap_cell_history.sql", params=params
-        )
-        summary = await bq.query_from_file(
-            "heatmap_cell_summary.sql", params=params
-        )
+        stations = await bq.query_from_file("heatmap_cell_stations.sql", params=params)
+        history = await bq.query_from_file("heatmap_cell_history.sql", params=params)
+        summary = await bq.query_from_file("heatmap_cell_summary.sql", params=params)
     except Exception as e:
         logger.error(f"Cell detail query failed: {e}")
         raise HTTPException(status_code=500, detail="Query failed")

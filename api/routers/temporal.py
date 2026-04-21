@@ -8,28 +8,20 @@ router = APIRouter()
 @router.get(
     "/day-of-week",
     summary="Delay statistics by day of week",
-    description="""
-    Returns avg delay, median, 90th percentile, % late, and trip count
-    for each day of the week. Answers: Which day has the worst delays?
-    """,
 )
 async def get_day_of_week_stats(
     request: Request,
     route_id: str = Query("all"),
-    period: str = Query("90d", regex="^(7d|14d|30d|60d|90d|180d)$"),
+    period: str = Query("90d", pattern="^(7d|14d|30d|60d|90d|180d)$"),
 ):
     bq = request.app.state.bq_service
     period_days = int(period.replace("d", ""))
 
     rows = await bq.query_from_file(
         "temporal_day_of_week.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
 
-    # Add insights
     if rows:
         worst_day = max(rows, key=lambda r: r["avg_delay_minutes"])
         best_day = min(rows, key=lambda r: r["avg_delay_minutes"])
@@ -39,6 +31,7 @@ async def get_day_of_week_stats(
         )
         worst_pct_above = (
             (worst_day["avg_delay_minutes"] - system_avg) / system_avg * 100
+            if system_avg != 0 else 0
         )
 
         insight = (
@@ -65,18 +58,12 @@ async def get_day_of_week_stats(
 @router.get(
     "/hourly",
     summary="Delay statistics by hour of day",
-    description="""
-    Returns avg delay by hour, split by weekday vs weekend.
-    Identifies rush hour patterns and peak delay times.
-    """,
 )
 async def get_hourly_stats(
     request: Request,
     route_id: str = Query("all"),
-    day_type: str = Query(
-        "all", regex="^(all|weekday|weekend)$"
-    ),
-    period: str = Query("90d", regex="^(7d|14d|30d|60d|90d|180d)$"),
+    day_type: str = Query("all", pattern="^(all|weekday|weekend)$"),
+    period: str = Query("90d", pattern="^(7d|14d|30d|60d|90d|180d)$"),
 ):
     bq = request.app.state.bq_service
     period_days = int(period.replace("d", ""))
@@ -92,11 +79,7 @@ async def get_hourly_stats(
 
     return {
         "data": rows,
-        "metadata": {
-            "route_id": route_id,
-            "day_type": day_type,
-            "period": period,
-        },
+        "metadata": {"route_id": route_id, "day_type": day_type, "period": period},
     }
 
 
@@ -114,10 +97,7 @@ async def get_rush_hour_comparison(
 
     rows = await bq.query_from_file(
         "temporal_rush_hour.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
 
     return {"data": rows}
@@ -126,7 +106,6 @@ async def get_rush_hour_comparison(
 @router.get(
     "/delay-probability",
     summary="Probability of >5min delay by hour",
-    description="Shows risk level for each hour of the day.",
 )
 async def get_delay_probability(
     request: Request,
@@ -138,13 +117,9 @@ async def get_delay_probability(
 
     rows = await bq.query_from_file(
         "temporal_delay_probability.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
 
-    # Add risk levels
     for row in rows:
         prob = row["delay_probability"]
         if prob >= 40:
@@ -160,7 +135,6 @@ async def get_delay_probability(
 @router.get(
     "/scatter/day-of-week",
     summary="Individual trip delays for scatter plot by day",
-    description="Returns sampled individual trip data for scatter/box plots.",
 )
 async def get_scatter_day_of_week(
     request: Request,

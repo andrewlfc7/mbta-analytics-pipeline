@@ -19,34 +19,24 @@ async def get_weather_overview(
 
     rows = await bq.query_from_file(
         "weather_overview.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
 
-    # Calculate multipliers vs clear baseline
     clear_avg = next(
-        (r["avg_delay_minutes"] for r in rows
-         if r["condition"] == "Clear"),
+        (r["avg_delay_minutes"] for r in rows if r["condition"] == "Clear"),
         2.0,
     )
 
     for row in rows:
-        row["multiplier"] = round(
-            row["avg_delay_minutes"] / clear_avg, 1
-        )
+        row["multiplier"] = round(row["avg_delay_minutes"] / clear_avg, 1) if clear_avg else 0
         row["pct_increase"] = round(
             (row["avg_delay_minutes"] - clear_avg) / clear_avg * 100
-        )
+        ) if clear_avg else 0
 
     return {"data": rows, "baseline_clear": clear_avg}
 
 
-@router.get(
-    "/scatter/temperature",
-    summary="Temperature vs delay scatter data",
-)
+@router.get("/scatter/temperature", summary="Temperature vs delay scatter data")
 async def get_temperature_scatter(
     request: Request,
     route_id: str = Query("all"),
@@ -57,23 +47,16 @@ async def get_temperature_scatter(
 
     rows = await bq.query_from_file(
         "weather_scatter_temp.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
-
     return {"data": rows}
 
 
-@router.get(
-    "/scatter/precipitation",
-    summary="Precipitation amount vs delay scatter data",
-)
+@router.get("/scatter/precipitation", summary="Precipitation vs delay scatter data")
 async def get_precipitation_scatter(
     request: Request,
     route_id: str = Query("all"),
-    precip_type: str = Query("all", regex="^(all|rain|snow)$"),
+    precip_type: str = Query("all", pattern="^(all|rain|snow)$"),
     period: str = Query("365d"),
 ):
     bq = request.app.state.bq_service
@@ -87,14 +70,10 @@ async def get_precipitation_scatter(
             "period_days": str(period_days),
         },
     )
-
     return {"data": rows}
 
 
-@router.get(
-    "/scatter/wind",
-    summary="Wind speed vs delay scatter data, colored by route",
-)
+@router.get("/scatter/wind", summary="Wind speed vs delay scatter data")
 async def get_wind_scatter(
     request: Request,
     route_id: str = Query("all"),
@@ -105,19 +84,12 @@ async def get_wind_scatter(
 
     rows = await bq.query_from_file(
         "weather_scatter_wind.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
-
     return {"data": rows}
 
 
-@router.get(
-    "/day-matrix",
-    summary="Weather condition × day of week delay matrix",
-)
+@router.get("/day-matrix", summary="Weather condition × day of week delay matrix")
 async def get_weather_day_matrix(
     request: Request,
     route_id: str = Query("all"),
@@ -128,17 +100,12 @@ async def get_weather_day_matrix(
 
     rows = await bq.query_from_file(
         "weather_day_matrix.sql",
-        params={
-            "route_filter": route_id,
-            "period_days": str(period_days),
-        },
+        params={"route_filter": route_id, "period_days": str(period_days)},
     )
 
-    # Find worst and best combos
     if rows:
         worst = max(rows, key=lambda r: r["avg_delay_minutes"])
         best = min(rows, key=lambda r: r["avg_delay_minutes"])
-
         insight = (
             f"WORST: {worst['condition']} + {worst['day_of_week']} "
             f"= {worst['avg_delay_minutes']:.1f} min avg delay. "
@@ -151,10 +118,7 @@ async def get_weather_day_matrix(
     return {"data": rows, "insight": insight}
 
 
-@router.get(
-    "/route-vulnerability",
-    summary="Route sensitivity to weather conditions",
-)
+@router.get("/route-vulnerability", summary="Route sensitivity to weather conditions")
 async def get_route_vulnerability(
     request: Request,
     period: str = Query("365d"),
@@ -167,10 +131,9 @@ async def get_route_vulnerability(
         params={"period_days": str(period_days)},
     )
 
-    # Calculate sensitivity scores
     for row in rows:
-        clear = row.get("clear_avg", 2.0)
-        snow = row.get("snow_avg", 8.0)
+        clear = row.get("clear_avg") or 2.0
+        snow = row.get("snow_avg") or 0.0
         row["snow_multiplier"] = round(snow / clear, 1) if clear > 0 else 0
         if row["snow_multiplier"] >= 3.5:
             row["sensitivity"] = "HIGH"
