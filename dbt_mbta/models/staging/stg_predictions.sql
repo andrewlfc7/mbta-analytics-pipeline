@@ -29,7 +29,7 @@ deduped as (
     select
         *,
         row_number() over (
-            partition by prediction_id, extracted_at
+            partition by trip_id, stop_id
             order by extracted_at desc
         ) as _dedupe_rank
     from cleaned
