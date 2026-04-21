@@ -47,7 +47,7 @@ with DAG(
     dag_id="realtime_facts",
     default_args=default_args,
     description="Extract real-time predictions and vehicle positions",
-    schedule_interval="*/5 * * * *",
+    schedule_interval="0 * * * *",
     start_date=datetime(2025, 1, 1),
     max_active_runs=1,
     max_active_tasks=2,
