@@ -61,7 +61,6 @@ joined as (
         w.weather_code,
         w.weather_condition,
 
-        -- Weather flags for modeling
         case when w.precipitation_mm > 0 then true else false end as is_precipitation,
         case when w.snowfall_cm > 0 then true else false end as is_snow,
         case when w.visibility_m < 5000 then true else false end as is_low_visibility,
