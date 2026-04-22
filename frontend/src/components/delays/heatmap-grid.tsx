@@ -10,6 +10,15 @@ interface Props {
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function dayToIndex(day: any): number {
+  if (typeof day === "number") return day;
+  if (typeof day === "string") {
+    const idx = DAYS.findIndex((d) => d.toLowerCase() === day.toLowerCase());
+    return idx >= 0 ? idx : -1;
+  }
+  return -1;
+}
+
 export function HeatmapGrid({ data }: Props) {
   const [selectedCell, setSelectedCell] = useState<{ day: number; hour: number } | null>(null);
 
@@ -17,15 +26,17 @@ export function HeatmapGrid({ data }: Props) {
   const metadata = data?.data?.metadata || data?.metadata || {};
   const cells = Array.isArray(heatmapData) ? heatmapData : [];
 
-  // Build lookup: day_of_week -> hour -> cell data
+  // Build lookup: dayIndex (number) -> hour -> cell data
   const grid: Record<number, Record<number, any>> = {};
   let minDelay = Infinity;
   let maxDelay = -Infinity;
 
   cells.forEach((cell: any) => {
-    const day = cell.day_of_week ?? cell.day ?? 0;
+    const day = dayToIndex(cell.day_of_week ?? cell.day ?? 0);
     const hour = cell.hour ?? cell.hour_of_day ?? 0;
     const delay = cell.avg_delay_minutes ?? cell.avg_delay ?? 0;
+
+    if (day < 0) return; // skip unrecognized day
 
     if (!grid[day]) grid[day] = {};
     grid[day][hour] = cell;
@@ -143,16 +154,16 @@ export function HeatmapGrid({ data }: Props) {
       </div>
 
       {/* Metadata bar */}
-      {(worstCell || bestCell || metadata.total_trips) && (
+      {(worstCell || bestCell || metadata.total_trips_analyzed || metadata.total_trips) && (
         <div className="flex flex-wrap gap-6 rounded-xl border border-slate-700/50 bg-surface-card px-6 py-4 text-sm text-content-muted">
-          {metadata.total_trips && (
-            <span>Total trips: {formatNumber(metadata.total_trips)}</span>
+          {(metadata.total_trips_analyzed || metadata.total_trips) && (
+            <span>Total trips: {formatNumber(metadata.total_trips_analyzed ?? metadata.total_trips)}</span>
           )}
           {worstCell && (
             <span>
               Worst:{" "}
               <span className="text-status-danger">
-                {DAYS[worstCell.day_of_week ?? worstCell.day ?? 0]}{" "}
+                {DAYS[dayToIndex(worstCell.day_of_week ?? worstCell.day ?? 0)]}{" "}
                 {worstCell.hour ?? worstCell.hour_of_day}:00 (
                 {formatMinutes(worstCell.avg_delay_minutes ?? worstCell.avg_delay ?? 0)})
               </span>
@@ -162,7 +173,7 @@ export function HeatmapGrid({ data }: Props) {
             <span>
               Best:{" "}
               <span className="text-status-success">
-                {DAYS[bestCell.day_of_week ?? bestCell.day ?? 0]}{" "}
+                {DAYS[dayToIndex(bestCell.day_of_week ?? bestCell.day ?? 0)]}{" "}
                 {bestCell.hour ?? bestCell.hour_of_day}:00 (
                 {formatMinutes(bestCell.avg_delay_minutes ?? bestCell.avg_delay ?? 0)})
               </span>
@@ -199,7 +210,7 @@ export function HeatmapGrid({ data }: Props) {
             <div>
               <p className="text-xs text-content-faint uppercase tracking-wider">Late %</p>
               <p className="mt-1 text-xl font-bold text-content-primary">
-                {(selectedCellData.late_percentage ?? selectedCellData.late_pct ?? 0).toFixed(1)}%
+                {(selectedCellData.pct_late ?? selectedCellData.late_percentage ?? selectedCellData.late_pct ?? 0).toFixed(1)}%
               </p>
             </div>
           </div>
