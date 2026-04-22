@@ -36,4 +36,8 @@ great_expectations/uncommitted/
 # IDE
 .vscode/
 .idea/
+
+# keys
 mbta-sa-key.json
+
+frontend/.env.local
