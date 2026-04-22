@@ -21,7 +21,7 @@ export function OnTimeComparisonBars({ routes }: Props) {
     .map((r: any) => ({
       route: r.route_id || r.route,
       name: getRouteDisplayName(r.route_id || r.route),
-      onTime: r.on_time_percentage ?? r.ontime_percentage ?? 0,
+      onTime: r.on_time_pct ?? r.on_time_percentage ?? r.ontime_percentage ?? 0,
       color: getRouteColor(r.route_id || r.route),
     }))
     .sort((a, b) => b.onTime - a.onTime);

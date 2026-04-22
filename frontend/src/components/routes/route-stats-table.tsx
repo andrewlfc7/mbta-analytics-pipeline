@@ -41,7 +41,7 @@ export function RouteStatsTable({ routes, expandedRoute, onToggleExpand }: Props
   const getValue = (route: any, key: SortKey): number => {
     switch (key) {
       case "on_time":
-        return route.on_time_percentage ?? route.ontime_percentage ?? 0;
+        return route.on_time_pct ?? route.on_time_percentage ?? route.ontime_percentage ?? 0;
       case "avg_delay":
         return route.avg_delay_minutes ?? route.average_delay ?? 0;
       case "median_delay":

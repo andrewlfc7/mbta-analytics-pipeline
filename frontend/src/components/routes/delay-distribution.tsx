@@ -18,7 +18,7 @@ interface Props {
 
 const DELAY_CATEGORIES = [
   { key: "early_count", label: "Early", color: "#22C55E" },
-  { key: "on_time_count", label: "On Time", color: "#3B82F6" },
+  { key: "on_time_strict_count", label: "On Time", color: "#3B82F6" },
   { key: "slightly_late_count", label: "Slightly Late", color: "#EAB308" },
   { key: "late_count", label: "Late", color: "#F97316" },
   { key: "very_late_count", label: "Very Late", color: "#EF4444" },
