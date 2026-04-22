@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     gcp_project_id: str = "server-i3"
     google_application_credentials: str = ""
 
-    # Cache
-    cache_ttl_seconds: int = 300
+    # Cache — 20 min TTL (data updates hourly via DAGs)
+    cache_ttl_seconds: int = 1200
     cache_dir: str = "/tmp/mbta_api_cache"
 
     # ML Model
