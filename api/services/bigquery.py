@@ -182,11 +182,11 @@ class BigQueryService:
             ("routes_hourly.sql", {"route_id": "Green-D"}),
             ("routes_hourly.sql", {"route_id": "Green-E"}),
             # Delays
-            ("heatmap_day_hour.sql", None),
-            ("temporal_day_of_week.sql", None),
-            ("temporal_hourly.sql", None),
-            ("temporal_rush_hour.sql", None),
-            ("temporal_delay_probability.sql", None),
+            ("heatmap_day_hour.sql", {"route_filter": "all", "direction": "all", "period_days": "30"}),
+            ("temporal_day_of_week.sql", {"route_filter": "all", "period_days": "90"}),
+            ("temporal_hourly.sql", {"route_filter": "all", "day_type": "all", "period_days": "90"}),
+            ("temporal_rush_hour.sql", {"route_filter": "all", "period_days": "90"}),
+            ("temporal_delay_probability.sql", {"route_filter": "all", "period_days": "90"}),
             # Stations
             ("stations_performance.sql", {"sort_by": "delay_hotspot_score", "limit": "50"}),
             ("stations_map.sql", None),

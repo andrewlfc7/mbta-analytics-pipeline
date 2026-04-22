@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/ui/error-state";
 
 export default function StationsPage() {
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState("hotspot_score");
+  const [sortBy, setSortBy] = useState("delay_hotspot_score");
 
   const { data: mapData, loading: mapLoading } = useApi<any>("/stations/map");
   const {
@@ -32,7 +32,7 @@ export default function StationsPage() {
             onChange={(e) => setSortBy(e.target.value)}
             className="rounded-lg border border-slate-700 bg-surface-card px-3 py-2 text-sm text-content-primary focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
           >
-            <option value="hotspot_score">Hotspot Score</option>
+            <option value="delay_hotspot_score">Hotspot Score</option>
             <option value="avg_delay">Avg Delay</option>
             <option value="late_percentage">Late %</option>
             <option value="total_predictions">Total Trips</option>
