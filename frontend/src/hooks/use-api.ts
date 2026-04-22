@@ -9,8 +9,14 @@ interface UseApiResult<T> {
   refetch: () => void;
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://34.30.107.174:8000/api/v1";
+function getApiBase() {
+  // Client-side: use the proxy to avoid mixed content
+  if (typeof window !== "undefined") {
+    return "/api/proxy";
+  }
+  // Server-side: call the API directly (no mixed content issue)
+  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://34.30.107.174:8000/api/v1";
+}
 
 export function useApi<T>(
   endpoint: string,
@@ -36,7 +42,8 @@ export function useApi<T>(
     setError(null);
 
     try {
-      let url = `${API_BASE}${endpoint}`;
+      const base = getApiBase();
+      let url = `${base}${endpoint}`;
 
       const currentParams = paramsRef.current;
       if (currentParams) {

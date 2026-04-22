@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://34.30.107.174:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface FetchOptions {
   params?: Record<string, string | number | undefined>;
@@ -8,6 +8,7 @@ interface FetchOptions {
 async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { params, revalidate = 60 } = options;
 
+  // Server components always call the API directly — no mixed content issue
   let url = `${API_BASE}${endpoint}`;
 
   if (params) {
