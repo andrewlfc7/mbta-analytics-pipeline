@@ -28,6 +28,7 @@ x-airflow-common: &airflow-common
     GCS_BUCKET: mbta-raw-prod
     GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/keys/mbta-sa-key.json
     PYTHONPATH: /opt/airflow
+    DBT_PROFILES_DIR: /opt/airflow/dbt_mbta
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
@@ -63,10 +64,18 @@ services:
 
   airflow-init:
     <<: *airflow-common
+    user: "0:0"
     entrypoint: /bin/bash
     command:
       - -c
       - |
+        # Fix dbt directory permissions for airflow user
+        mkdir -p /opt/airflow/dbt_mbta/logs /opt/airflow/dbt_mbta/target /opt/airflow/dbt_mbta/dbt_packages
+        chmod -R 777 /opt/airflow/dbt_mbta/logs /opt/airflow/dbt_mbta/target /opt/airflow/dbt_mbta/dbt_packages
+        # Fix data directory
+        mkdir -p /opt/airflow/data/raw
+        chmod -R 777 /opt/airflow/data
+        # Run migrations
         airflow db migrate
         airflow users create \
           --username admin \

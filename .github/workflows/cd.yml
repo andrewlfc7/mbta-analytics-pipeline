@@ -38,17 +38,50 @@ jobs:
         run: |
           gcloud config set project "${{ secrets.GCP_PROJECT_ID }}"
 
-      - name: Deploy on VM with gcloud ssh
+      - name: Deploy on VM
         run: |
           gcloud compute ssh "${{ secrets.GCP_INSTANCE_NAME }}" \
             --zone "${{ secrets.GCP_ZONE }}" \
-            --command "\
-              git config --global --add safe.directory /opt/mbta-analytics-pipeline && \
-              cd /opt/mbta-analytics-pipeline && \
-              cp .env /tmp/.env.backup 2>/dev/null || true && \
-              git fetch origin && \
-              git reset --hard origin/master && \
-              cp /tmp/.env.backup .env 2>/dev/null || true && \
-              sudo docker compose down -v && \
-              sudo docker compose up -d --build && \
-              sudo docker image prune -f"
+            --command "bash -s" << 'DEPLOY_SCRIPT'
+
+          set -e
+          REPO="/home/Drew/mbta-analytics-pipeline"
+
+          echo ">>> Pulling latest code"
+          git config --global --add safe.directory "$REPO"
+          cd "$REPO"
+
+          # Backup .env
+          cp .env /tmp/.env.backup 2>/dev/null || true
+
+          # Pull
+          git fetch origin
+          git reset --hard origin/master
+
+          # Restore .env
+          cp /tmp/.env.backup .env 2>/dev/null || true
+
+          # Fix ownership
+          sudo chown -R Drew:Drew "$REPO"
+
+          # Fix permissions for Docker volumes (airflow UID 50000)
+          chmod -R 777 "$REPO/dags" "$REPO/data" "$REPO/src" "$REPO/great_expectations"
+          mkdir -p "$REPO/dbt_mbta/logs" "$REPO/dbt_mbta/target" "$REPO/dbt_mbta/dbt_packages"
+          chmod -R 777 "$REPO/dbt_mbta"
+
+          echo ">>> Rebuilding containers"
+          cd "$REPO"
+          sudo docker compose down
+          sudo docker compose up -d --build
+          sudo docker image prune -f
+
+          echo ">>> Restarting API"
+          sudo systemctl restart mbta-api
+          sleep 5
+
+          echo ">>> Verification"
+          sudo docker compose ps
+          curl -sf http://localhost:8000/health || echo "API not ready yet"
+
+          echo ">>> Deploy complete"
+          DEPLOY_SCRIPT

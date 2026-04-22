@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:3000",
         "https://mbta-analytics.vercel.app",
+        "https://mbta-analytics-pipeline.vercel.app",
     ]
 
     class Config:
