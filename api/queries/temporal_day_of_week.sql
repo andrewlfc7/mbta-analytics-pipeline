@@ -15,5 +15,5 @@ SELECT
   ROUND(AVG(late_pct), 1) AS pct_late
 FROM `{project}.marts.mart_delay_analysis`
 WHERE ('@route_filter' = 'all' OR route_id = '@route_filter')
-GROUP BY day_of_week
+GROUP BY 1, 2
 ORDER BY day_num

@@ -39,7 +39,7 @@ export function RushHourCards({ params }: Props) {
       </h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {periodList.map((p: any) => {
-          const key = p.period || p.time_period || "";
+          const key = p.time_period || p.period || "";
           const config = PERIOD_CONFIG[key] || PERIOD_CONFIG.off_peak;
           const Icon = config.icon;
 
@@ -64,13 +64,13 @@ export function RushHourCards({ params }: Props) {
                 <div className="flex justify-between">
                   <span className="text-sm text-content-muted">On-Time</span>
                   <span className="text-sm font-medium text-content-primary">
-                    {formatPercent(p.on_time_percentage ?? p.ontime_pct ?? 0)}
+                    {formatPercent(p.on_time_pct ?? p.on_time_percentage ?? p.ontime_pct ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-content-muted">Late</span>
                   <span className="text-sm font-medium text-content-primary">
-                    {formatPercent(p.late_percentage ?? p.late_pct ?? 0)}
+                    {formatPercent(p.pct_late ?? p.late_percentage ?? p.late_pct ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">

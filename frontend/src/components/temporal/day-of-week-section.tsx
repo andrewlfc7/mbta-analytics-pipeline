@@ -19,6 +19,15 @@ import {
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+function dayToIndex(day: any): number {
+  if (typeof day === "number") return day;
+  if (typeof day === "string") {
+    const idx = DAY_FULL.findIndex((d) => d.toLowerCase() === day.toLowerCase());
+    return idx >= 0 ? idx : -1;
+  }
+  return -1;
+}
+
 interface Props {
   params: Record<string, string | number | undefined>;
 }
@@ -35,22 +44,24 @@ export function DayOfWeekSection({ params }: Props) {
   const days = data?.data?.days || data?.days || data?.data || [];
   const dayList = Array.isArray(days) ? days : [];
 
-  const chartData = dayList.map((d: any) => ({
-    day: d.day_of_week ?? d.day ?? 0,
-    name: DAY_NAMES[d.day_of_week ?? d.day ?? 0] || `Day ${d.day_of_week}`,
-    fullName: DAY_FULL[d.day_of_week ?? d.day ?? 0] || "",
-    delay: d.avg_delay_minutes ?? d.avg_delay ?? 0,
-    median: d.median_delay_minutes ?? d.median_delay ?? 0,
-    latePercent: d.late_percentage ?? d.late_pct ?? 0,
-    trips: d.trip_count ?? d.total_trips ?? 0,
-  }));
+  const chartData = dayList.map((d: any) => {
+    const dayIdx = dayToIndex(d.day_of_week ?? d.day ?? 0);
+    return {
+      day: dayIdx,
+      name: DAY_NAMES[dayIdx] || `Day ${d.day_of_week}`,
+      fullName: DAY_FULL[dayIdx] || String(d.day_of_week),
+      delay: d.avg_delay_minutes ?? d.avg_delay ?? 0,
+      median: d.median_delay_minutes ?? d.median_delay ?? 0,
+      latePercent: d.pct_late ?? d.late_percentage ?? d.late_pct ?? 0,
+      trips: d.trip_count ?? d.total_trips ?? 0,
+    };
+  }).sort((a, b) => a.day - b.day);
 
   const systemAvg =
     chartData.length > 0
       ? chartData.reduce((s: number, d: any) => s + d.delay, 0) / chartData.length
       : 0;
 
-  // Find worst day for insight
   const worstDay = chartData.reduce(
     (max: any, d: any) => (d.delay > (max?.delay || 0) ? d : max),
     null
