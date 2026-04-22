@@ -6,7 +6,9 @@ SELECT
   ROUND(AVG(on_time_pct), 1) AS on_time_pct,
   ROUND(AVG(late_pct), 1) AS pct_late
 FROM `{project}.marts.mart_delay_analysis`
-WHERE ('@route_filter' = 'all' OR route_id = '@route_filter')
+WHERE
+  ('@route_filter' = 'all' OR route_id = '@route_filter')
+  AND service_date >= DATE_SUB(CURRENT_DATE(), INTERVAL @period_days DAY)
 GROUP BY time_period
 ORDER BY
   CASE time_period
