@@ -32,11 +32,42 @@ const modeColor: Record<string, string> = {
   ferry: "text-teal-400",
 };
 
-export function RoutePerformanceTable({ mode }: { mode: TransitMode }) {
+function mapRouteRows(rows: any[]): RouteRow[] {
+  return rows.map((r: any, idx: number) => ({
+    rank: idx + 1,
+    route_id: r.route_id,
+    route_name: r.route_name || r.route_id,
+    route_type_desc: (r.route_type_desc || "").toLowerCase(),
+    on_time_pct: r.on_time_pct ?? 0,
+    avg_delay_minutes: r.avg_delay_minutes ?? 0,
+    reliability_score: r.reliability_score ?? 0,
+  }));
+}
+
+export function RoutePerformanceTable({
+  mode,
+  initialRows,
+  deferFetch = false,
+}: {
+  mode: TransitMode;
+  initialRows?: any[];
+  deferFetch?: boolean;
+}) {
   const [routes, setRoutes] = useState<RouteRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialRows) ? false : deferFetch);
 
   useEffect(() => {
+    if (initialRows && mode === "all") {
+      setRoutes(mapRouteRows(initialRows));
+      setLoading(false);
+      return;
+    }
+
+    if (deferFetch) {
+      setLoading(true);
+      return;
+    }
+
     async function fetchRoutes() {
       setLoading(true);
       try {
@@ -48,16 +79,7 @@ export function RoutePerformanceTable({ mode }: { mode: TransitMode }) {
           params
         );
 
-        const rows = (json.data || []).map((r: any, idx: number) => ({
-          rank: idx + 1,
-          route_id: r.route_id,
-          route_name: r.route_name || r.route_id,
-          route_type_desc: (r.route_type_desc || "").toLowerCase(),
-          on_time_pct: r.on_time_pct ?? 0,
-          avg_delay_minutes: r.avg_delay_minutes ?? 0,
-          reliability_score: r.reliability_score ?? 0,
-        }));
-        setRoutes(rows);
+        setRoutes(mapRouteRows(json.data || []));
       } catch (err) {
         console.error("Route ranking fetch error:", err);
       } finally {
@@ -65,7 +87,7 @@ export function RoutePerformanceTable({ mode }: { mode: TransitMode }) {
       }
     }
     fetchRoutes();
-  }, [mode]);
+  }, [deferFetch, initialRows, mode]);
 
   if (loading) {
     return (

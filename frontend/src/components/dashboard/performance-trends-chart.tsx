@@ -40,13 +40,99 @@ const modeLineLabels: Record<string, string> = {
   bus: "Bus",
 };
 
-export function PerformanceTrendsChart() {
+function mapTrendRows(rows: any[]): { points: TrendPoint[]; modes: string[] } {
+  const hourMap = new Map<number, TrendPoint>();
+  const modeSet = new Set<string>();
+  const hourAllMap = new Map<
+    number,
+    { totalTrips: number; weightedOT: number; weightedDelay: number }
+  >();
+
+  for (const row of rows) {
+    const hour = row.hour_of_day;
+    const modeKey = (row.mode || "")
+      .toLowerCase()
+      .replace(/ /g, "_");
+    modeSet.add(modeKey);
+
+    if (!hourAllMap.has(hour)) {
+      hourAllMap.set(hour, {
+        totalTrips: 0,
+        weightedOT: 0,
+        weightedDelay: 0,
+      });
+    }
+    const agg = hourAllMap.get(hour)!;
+    const trips = row.trips || 0;
+    agg.totalTrips += trips;
+    agg.weightedOT += (row.on_time_pct || 0) * trips;
+    agg.weightedDelay += (row.avg_delay_minutes || 0) * trips;
+  }
+
+  for (const row of rows) {
+    const hour = row.hour_of_day;
+    const modeKey = (row.mode || "")
+      .toLowerCase()
+      .replace(/ /g, "_");
+
+    if (!hourMap.has(hour)) {
+      const allAgg = hourAllMap.get(hour);
+      const allOT =
+        allAgg && allAgg.totalTrips > 0
+          ? Math.round((allAgg.weightedOT / allAgg.totalTrips) * 10) / 10
+          : 0;
+      const allDelay =
+        allAgg && allAgg.totalTrips > 0
+          ? Math.round((allAgg.weightedDelay / allAgg.totalTrips) * 10) / 10
+          : 0;
+
+      hourMap.set(hour, {
+        hour,
+        label: formatHour(hour),
+        all_on_time: allOT,
+        all_avg_delay: allDelay,
+        all_trips: allAgg?.totalTrips || 0,
+      });
+    }
+
+    const point = hourMap.get(hour)!;
+    point[`${modeKey}_on_time`] = row.on_time_pct || 0;
+    point[`${modeKey}_avg_delay`] = row.avg_delay_minutes || 0;
+    point[`${modeKey}_trips`] = row.trips || 0;
+  }
+
+  return {
+    points: Array.from(hourMap.values()).sort((a, b) => a.hour - b.hour),
+    modes: Array.from(modeSet),
+  };
+}
+
+export function PerformanceTrendsChart({
+  initialRows,
+  deferFetch = false,
+}: {
+  initialRows?: any[];
+  deferFetch?: boolean;
+}) {
   const [metric, setMetric] = useState<MetricTab>("on_time");
   const [data, setData] = useState<TrendPoint[]>([]);
   const [modes, setModes] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialRows) ? false : deferFetch);
 
   useEffect(() => {
+    if (initialRows) {
+      const mapped = mapTrendRows(initialRows);
+      setData(mapped.points);
+      setModes(mapped.modes);
+      setLoading(false);
+      return;
+    }
+
+    if (deferFetch) {
+      setLoading(true);
+      return;
+    }
+
     async function fetchTrends() {
       setLoading(true);
       try {
@@ -55,77 +141,9 @@ export function PerformanceTrendsChart() {
           { day_type: "weekday" }
         );
 
-        const rows = json.data || [];
-
-        // Pivot: group by hour, create columns per mode
-        const hourMap = new Map<number, TrendPoint>();
-        const modeSet = new Set<string>();
-
-        // First pass: compute "all modes" averages
-        const hourAllMap = new Map<
-          number,
-          { totalTrips: number; weightedOT: number; weightedDelay: number }
-        >();
-
-        for (const row of rows) {
-          const hour = row.hour_of_day;
-          const modeKey = (row.mode || "")
-            .toLowerCase()
-            .replace(/ /g, "_");
-          modeSet.add(modeKey);
-
-          if (!hourAllMap.has(hour)) {
-            hourAllMap.set(hour, {
-              totalTrips: 0,
-              weightedOT: 0,
-              weightedDelay: 0,
-            });
-          }
-          const agg = hourAllMap.get(hour)!;
-          const trips = row.trips || 0;
-          agg.totalTrips += trips;
-          agg.weightedOT += (row.on_time_pct || 0) * trips;
-          agg.weightedDelay += (row.avg_delay_minutes || 0) * trips;
-        }
-
-        // Build chart data
-        for (const row of rows) {
-          const hour = row.hour_of_day;
-          const modeKey = (row.mode || "")
-            .toLowerCase()
-            .replace(/ /g, "_");
-
-          if (!hourMap.has(hour)) {
-            const allAgg = hourAllMap.get(hour);
-            const allOT =
-              allAgg && allAgg.totalTrips > 0
-                ? Math.round(allAgg.weightedOT / allAgg.totalTrips * 10) / 10
-                : 0;
-            const allDelay =
-              allAgg && allAgg.totalTrips > 0
-                ? Math.round(allAgg.weightedDelay / allAgg.totalTrips * 10) / 10
-                : 0;
-
-            hourMap.set(hour, {
-              hour,
-              label: formatHour(hour),
-              all_on_time: allOT,
-              all_avg_delay: allDelay,
-              all_trips: allAgg?.totalTrips || 0,
-            });
-          }
-
-          const point = hourMap.get(hour)!;
-          point[`${modeKey}_on_time`] = row.on_time_pct || 0;
-          point[`${modeKey}_avg_delay`] = row.avg_delay_minutes || 0;
-          point[`${modeKey}_trips`] = row.trips || 0;
-        }
-
-        const sorted = Array.from(hourMap.values()).sort(
-          (a, b) => a.hour - b.hour
-        );
-        setData(sorted);
-        setModes(Array.from(modeSet));
+        const mapped = mapTrendRows(json.data || []);
+        setData(mapped.points);
+        setModes(mapped.modes);
       } catch (err) {
         console.error("Performance trends fetch error:", err);
       } finally {
@@ -133,7 +151,7 @@ export function PerformanceTrendsChart() {
       }
     }
     fetchTrends();
-  }, []);
+  }, [deferFetch, initialRows]);
 
   const tabs: { key: MetricTab; label: string }[] = [
     { key: "on_time", label: "On-Time Performance" },

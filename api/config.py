@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Cache — 20 min TTL (data updates hourly via DAGs)
     cache_ttl_seconds: int = 2700
+    cache_max_entries: int = 256
     cache_dir: str = "/tmp/mbta_api_cache"
 
     # ML Model

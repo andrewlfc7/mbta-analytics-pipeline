@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TransitMode } from "@/components/ui/mode-filter-tabs";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, AlertCircle, Info, ChevronRight } from "lucide-react";
@@ -63,11 +62,44 @@ function mapSeverityCategory(severity: number, category: string): string {
   return "info";
 }
 
-export function ActiveAlertsList({ mode }: { mode: TransitMode }) {
+function mapAlerts(rows: any[]): AlertItem[] {
+  return rows.map((a: any) => ({
+    alert_id: a.alert_id || "",
+    severity: a.severity ?? 0,
+    severity_category: a.severity_category || "",
+    header: a.header || "Alert",
+    effect: a.effect || "",
+    service_effect: a.service_effect || "",
+    affected_route_count: a.affected_route_count ?? 0,
+    affected_routes: a.affected_routes ? String(a.affected_routes) : "",
+    impact_score: a.impact_score ?? 0,
+    active_start: a.active_start || "",
+    updated_at: a.updated_at || "",
+  }));
+}
+
+export function ActiveAlertsList({
+  initialRows,
+  deferFetch = false,
+}: {
+  initialRows?: any[];
+  deferFetch?: boolean;
+}) {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialRows) ? false : deferFetch);
 
   useEffect(() => {
+    if (initialRows) {
+      setAlerts(mapAlerts(initialRows));
+      setLoading(false);
+      return;
+    }
+
+    if (deferFetch) {
+      setLoading(true);
+      return;
+    }
+
     async function fetchAlerts() {
       setLoading(true);
       try {
@@ -76,23 +108,7 @@ export function ActiveAlertsList({ mode }: { mode: TransitMode }) {
           { limit: 5 }
         );
 
-        setAlerts(
-          (json.data || []).map((a: any) => ({
-            alert_id: a.alert_id || "",
-            severity: a.severity ?? 0,
-            severity_category: a.severity_category || "",
-            header: a.header || "Alert",
-            effect: a.effect || "",
-            service_effect: a.service_effect || "",
-            affected_route_count: a.affected_route_count ?? 0,
-            affected_routes: a.affected_routes
-              ? String(a.affected_routes)
-              : "",
-            impact_score: a.impact_score ?? 0,
-            active_start: a.active_start || "",
-            updated_at: a.updated_at || "",
-          }))
-        );
+        setAlerts(mapAlerts(json.data || []));
       } catch (err) {
         console.error("Alerts fetch error:", err);
       } finally {
@@ -100,7 +116,7 @@ export function ActiveAlertsList({ mode }: { mode: TransitMode }) {
       }
     }
     fetchAlerts();
-  }, [mode]);
+  }, [deferFetch, initialRows]);
 
   if (loading) {
     return (

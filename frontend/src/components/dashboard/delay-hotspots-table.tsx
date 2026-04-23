@@ -13,29 +13,49 @@ interface Hotspot {
   routes_served: number;
 }
 
-export function DelayHotspotsTable() {
+function mapHotspots(rows: any[]): Hotspot[] {
+  return rows.map((s: any, idx: number) => ({
+    rank: idx + 1,
+    stop_id: s.stop_id || "",
+    stop_name: s.stop_name || "Unknown",
+    municipality: s.municipality || "",
+    avg_delay_minutes: s.avg_delay_minutes ?? 0,
+    delay_hotspot_score: s.delay_hotspot_score ?? 0,
+    routes_served: s.routes_served ?? 0,
+  }));
+}
+
+export function DelayHotspotsTable({
+  initialRows,
+  deferFetch = false,
+}: {
+  initialRows?: any[];
+  deferFetch?: boolean;
+}) {
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialRows) ? false : deferFetch);
 
   useEffect(() => {
+    if (initialRows) {
+      setHotspots(mapHotspots(initialRows));
+      setLoading(false);
+      return;
+    }
+
+    if (deferFetch) {
+      setLoading(true);
+      return;
+    }
+
     async function fetchHotspots() {
+      setLoading(true);
       try {
         const json = await clientFetch<{ data: any[] }>(
           "/stations/delay-hotspots",
           { limit: 5 }
         );
 
-        setHotspots(
-          (json.data || []).map((s: any, idx: number) => ({
-            rank: idx + 1,
-            stop_id: s.stop_id || "",
-            stop_name: s.stop_name || "Unknown",
-            municipality: s.municipality || "",
-            avg_delay_minutes: s.avg_delay_minutes ?? 0,
-            delay_hotspot_score: s.delay_hotspot_score ?? 0,
-            routes_served: s.routes_served ?? 0,
-          }))
-        );
+        setHotspots(mapHotspots(json.data || []));
       } catch (err) {
         console.error("Delay hotspots fetch error:", err);
       } finally {
@@ -43,7 +63,7 @@ export function DelayHotspotsTable() {
       }
     }
     fetchHotspots();
-  }, []);
+  }, [deferFetch, initialRows]);
 
   if (loading) {
     return (

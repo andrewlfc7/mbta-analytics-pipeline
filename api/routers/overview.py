@@ -1,9 +1,14 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, Query, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _format_mode_key(mode: str | None) -> str:
+    return mode.lower().replace(" ", "_") if mode else "unknown"
 
 
 @router.get(
@@ -26,11 +31,7 @@ async def get_system_overview(
     trips_by_mode_rows = await bq.query_from_file("overview_trips_by_mode.sql")
     trips_by_mode = {}
     for row in trips_by_mode_rows:
-        mode_key = (
-            row["mode"].lower().replace(" ", "_")
-            if row.get("mode")
-            else "unknown"
-        )
+        mode_key = _format_mode_key(row.get("mode"))
         trips_by_mode[mode_key] = row["trips"]
 
     if current:
@@ -73,6 +74,97 @@ async def get_system_overview(
         }
     else:
         return {"error": "No data available"}
+
+
+@router.get(
+    "/dashboard-snapshot",
+    summary="Aggregated dashboard data for the homepage",
+)
+async def get_dashboard_snapshot(request: Request):
+    bq = request.app.state.bq_service
+
+    (
+        current,
+        previous,
+        trips_by_mode_rows,
+        route_ranking,
+        alerts,
+        performance_trends,
+        delay_hotspots,
+    ) = await asyncio.gather(
+        bq.query_from_file("overview_system_enhanced.sql"),
+        bq.query_from_file("overview_system_prev_week.sql"),
+        bq.query_from_file("overview_trips_by_mode.sql"),
+        bq.query_from_file(
+            "overview_route_ranking_filtered.sql",
+            params={"mode": "all", "limit": "5"},
+        ),
+        bq.query_from_file(
+            "alerts_active.sql",
+            params={"severity": "all", "limit": "5"},
+        ),
+        bq.query_from_file(
+            "overview_performance_trends.sql",
+            params={"day_type": "weekday"},
+        ),
+        bq.query_from_file(
+            "delay_hotspots.sql",
+            params={"limit": "5"},
+        ),
+    )
+
+    trips_by_mode = {
+        _format_mode_key(row.get("mode")): row.get("trips", 0)
+        for row in trips_by_mode_rows
+    }
+
+    system_payload: dict = {"error": "No data available"}
+    if current:
+        c = current[0]
+        p = previous[0] if previous else {}
+        prev_on_time = p.get("on_time_pct", c.get("on_time_pct", 0))
+        prev_delay = p.get("avg_delay_minutes", c.get("avg_delay_minutes", 0))
+        prev_trips = p.get("total_trips", c.get("total_trips", 0))
+        prev_alerts = p.get("active_alerts", c.get("active_alerts", 0))
+
+        total_trips = c.get("total_trips", 0)
+        trips_change_pct = round(
+            ((total_trips - prev_trips) / prev_trips * 100)
+            if prev_trips > 0
+            else 0,
+            1,
+        )
+
+        system_payload = {
+            "total_trips": total_trips,
+            "on_time_pct": c.get("on_time_pct", 0),
+            "avg_delay_minutes": c.get("avg_delay_minutes", 0),
+            "active_alerts": c.get("active_alerts", 0),
+            "critical_alerts": c.get("critical_alerts", 0),
+            "major_alerts": c.get("major_alerts", 0),
+            "minor_alerts": c.get("minor_alerts", 0),
+            "info_alerts": c.get("info_alerts", 0),
+            "on_time_pct_change": round(
+                c.get("on_time_pct", 0) - prev_on_time, 1
+            ),
+            "avg_delay_change": round(
+                c.get("avg_delay_minutes", 0) - prev_delay, 1
+            ),
+            "total_trips_change": total_trips - prev_trips,
+            "trips_change_pct": trips_change_pct,
+            "active_alerts_change": c.get("active_alerts", 0) - prev_alerts,
+            "trips_by_mode": trips_by_mode,
+            "last_updated": str(c.get("last_updated", "")),
+        }
+
+    return {
+        "system": system_payload,
+        "route_ranking": route_ranking,
+        "alerts": alerts,
+        "performance_trends": performance_trends,
+        "delay_hotspots": delay_hotspots,
+        "trips_by_mode": trips_by_mode_rows,
+    }
 
 
 @router.get(

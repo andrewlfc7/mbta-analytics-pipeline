@@ -41,33 +41,43 @@ const navigation: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+function formatLastUpdated(ts: string): string {
+  if (!ts) return "--";
+
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMin = Math.floor((now.getTime() - d.getTime()) / 60000);
+
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin} min ago`;
+  return `${Math.floor(diffMin / 60)} hr ago`;
+}
+
+export function Sidebar({
+  initialAlertCount = 0,
+  initialLastUpdated = "",
+}: {
+  initialAlertCount?: number;
+  initialLastUpdated?: string;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [alertCount, setAlertCount] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState("--");
+  const [alertCount, setAlertCount] = useState(initialAlertCount);
+  const [lastUpdated, setLastUpdated] = useState(
+    formatLastUpdated(initialLastUpdated)
+  );
 
   useEffect(() => {
     async function fetchAlertCount() {
       try {
         const data = await clientFetch<any>("/overview/system");
         setAlertCount(data.active_alerts ?? 0);
-        const ts = data.last_updated;
-        if (ts) {
-          const d = new Date(ts);
-          const now = new Date();
-          const diffMin = Math.floor(
-            (now.getTime() - d.getTime()) / 60000
-          );
-          if (diffMin < 1) setLastUpdated("Just now");
-          else if (diffMin < 60) setLastUpdated(`${diffMin} min ago`);
-          else setLastUpdated(`${Math.floor(diffMin / 60)} hr ago`);
-        }
+        setLastUpdated(formatLastUpdated(data.last_updated ?? ""));
       } catch {
         setAlertCount(0);
       }
     }
-    fetchAlertCount();
+
     const interval = setInterval(fetchAlertCount, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -154,7 +164,18 @@ export function Sidebar() {
           <p className="text-[11px] text-slate-500 mt-0.5 ml-4">
             {lastUpdated}
           </p>
-          <button className="flex items-center gap-1.5 mt-1.5 ml-4 text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+          <button
+            onClick={async () => {
+              try {
+                const data = await clientFetch<any>("/overview/system");
+                setAlertCount(data.active_alerts ?? 0);
+                setLastUpdated(formatLastUpdated(data.last_updated ?? ""));
+              } catch {
+                setAlertCount(0);
+              }
+            }}
+            className="flex items-center gap-1.5 mt-1.5 ml-4 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+          >
             <RefreshCw className="h-3 w-3" />
             Refresh
           </button>
