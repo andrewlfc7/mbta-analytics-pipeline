@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -49,23 +50,18 @@ export function Sidebar() {
   useEffect(() => {
     async function fetchAlertCount() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/overview/system`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setAlertCount(data.active_alerts ?? 0);
-          const ts = data.last_updated;
-          if (ts) {
-            const d = new Date(ts);
-            const now = new Date();
-            const diffMin = Math.floor(
-              (now.getTime() - d.getTime()) / 60000
-            );
-            if (diffMin < 1) setLastUpdated("Just now");
-            else if (diffMin < 60) setLastUpdated(`${diffMin} min ago`);
-            else setLastUpdated(`${Math.floor(diffMin / 60)} hr ago`);
-          }
+        const data = await clientFetch<any>("/overview/system");
+        setAlertCount(data.active_alerts ?? 0);
+        const ts = data.last_updated;
+        if (ts) {
+          const d = new Date(ts);
+          const now = new Date();
+          const diffMin = Math.floor(
+            (now.getTime() - d.getTime()) / 60000
+          );
+          if (diffMin < 1) setLastUpdated("Just now");
+          else if (diffMin < 60) setLastUpdated(`${diffMin} min ago`);
+          else setLastUpdated(`${Math.floor(diffMin / 60)} hr ago`);
         }
       } catch {
         setAlertCount(0);

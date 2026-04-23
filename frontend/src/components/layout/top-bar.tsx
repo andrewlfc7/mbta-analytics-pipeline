@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Cloud, Clock } from "lucide-react";
+import { clientFetch } from "@/lib/api";
 
 export function TopBar() {
   const [time, setTime] = useState("");
@@ -22,18 +23,13 @@ export function TopBar() {
 
     async function fetchWeather() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/weather/overview`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const overview = data?.data?.[0] || data?.data || data || {};
-          setWeather({
-            temp: overview.avg_temp_f
-              ? `${Math.round(overview.avg_temp_f)}F`
-              : "--",
-          });
-        }
+        const data = await clientFetch<any>("/weather/overview");
+        const overview = data?.data?.[0] || data?.data || data || {};
+        setWeather({
+          temp: overview.avg_temp_f
+            ? `${Math.round(overview.avg_temp_f)}F`
+            : "--",
+        });
       } catch {
         setWeather({ temp: "--" });
       }
