@@ -150,3 +150,14 @@ export async function getQualityOverview() {
 export async function getQualityAlerts(params?: { severity?: string; limit?: number }) {
   return apiFetch<any>("/quality/alerts", { params: params as any });
 }
+
+// ---------- Schedules ----------
+export async function getScheduleRoutes() {
+  return apiFetch<any>("/schedules/routes");
+}
+export async function getScheduleTimetable(routeId: string, directionId: number = 0) {
+  return apiFetch<any>("/schedules/timetable", { params: { route_id: routeId, direction_id: directionId } });
+}
+export async function getStopDepartures(stopId: string) {
+  return apiFetch<any>("/schedules/stop", { params: { stop_id: stopId } });
+}

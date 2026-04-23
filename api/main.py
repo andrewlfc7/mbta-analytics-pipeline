@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
-from api.routers import alerts, heatmap, overview, quality, routes, stations, temporal, weather
+from api.routers import alerts, heatmap, overview, quality, routes, schedules, stations, temporal, weather
 from api.services.bigquery import BigQueryService
 
 logging.basicConfig(level=logging.INFO)
