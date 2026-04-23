@@ -1,7 +1,6 @@
-import logging
-from collections import defaultdict
-
 from fastapi import APIRouter, Query, Request
+from collections import defaultdict
+import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -9,7 +8,7 @@ router = APIRouter()
 
 @router.get(
     "/performance",
-    summary="Station performance rankings",
+    summary="Station performance rankings with filtering",
 )
 async def get_station_performance(
     request: Request,
@@ -21,7 +20,7 @@ async def get_station_performance(
 ):
     bq = request.app.state.bq_service
     rows = await bq.query_from_file(
-        "stations_performance.sql",
+        "stations_performance_filtered.sql",
         params={"sort_by": sort_by, "limit": str(limit)},
     )
     return {"data": rows}
@@ -52,7 +51,7 @@ async def get_station_map(request: Request):
 
 @router.get(
     "/map/system",
-    summary="Full system map — route lines + station points with alerts",
+    summary="Full system map -- route lines + station points with alerts",
 )
 async def get_system_map_data(request: Request):
     bq = request.app.state.bq_service
@@ -69,8 +68,42 @@ async def get_system_map_data(request: Request):
     }
 
 
+@router.get(
+    "/{stop_id}/details",
+    summary="Detailed stats for a specific station",
+)
+async def get_station_details(request: Request, stop_id: str):
+    bq = request.app.state.bq_service
+
+    # Try enhanced query first
+    try:
+        rows = await bq.query_from_file(
+            "stations_detail_enhanced.sql",
+            params={"stop_id": stop_id},
+        )
+        if rows:
+            result = dict(rows[0]) if not isinstance(rows[0], dict) else rows[0]
+            # Serialize nested arrays
+            for field in ("routes", "active_alerts"):
+                if field in result and not isinstance(result[field], (list, str, type(None))):
+                    try:
+                        result[field] = [dict(r) for r in result[field]]
+                    except Exception:
+                        result[field] = str(result[field])
+            return {"data": result}
+    except Exception as e:
+        logger.warning(f"Enhanced station detail failed, using fallback: {e}")
+
+    # Fallback to existing query
+    rows = await bq.query_from_file(
+        "stations_detail.sql", params={"stop_id": stop_id}
+    )
+    if not rows:
+        return {"error": f"No data for station {stop_id}"}
+    return {"data": rows[0]}
+
+
 def _build_route_geojson(route_lines: list[dict]) -> dict:
-    """Convert ordered station points into GeoJSON LineStrings per route."""
     routes: dict = defaultdict(lambda: {"coords": [], "meta": {}})
 
     for row in route_lines:
@@ -95,22 +128,19 @@ def _build_route_geojson(route_lines: list[dict]) -> dict:
     features = []
     for rid, data in routes.items():
         if len(data["coords"]) >= 2:
-            features.append(
-                {
-                    "type": "Feature",
-                    "properties": data["meta"],
-                    "geometry": {
-                        "type": "LineString",
-                        "coordinates": data["coords"],
-                    },
-                }
-            )
+            features.append({
+                "type": "Feature",
+                "properties": data["meta"],
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": data["coords"],
+                },
+            })
 
     return {"type": "FeatureCollection", "features": features}
 
 
 def _build_station_geojson(stations: list[dict]) -> dict:
-    """Build GeoJSON points for stations."""
     features = []
     for row in stations:
         lat = row.get("latitude")
@@ -118,38 +148,22 @@ def _build_station_geojson(stations: list[dict]) -> dict:
         if lat is None or lng is None:
             continue
 
-        features.append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "stop_id": row.get("stop_id", ""),
-                    "stop_name": row.get("stop_name", ""),
-                    "municipality": row.get("municipality", ""),
-                    "avg_delay_minutes": row.get("avg_delay_minutes", 0),
-                    "delay_hotspot_score": row.get("delay_hotspot_score", 0),
-                    "routes_served": row.get("routes_served", 0),
-                    "alert_count": row.get("active_alert_count", 0),
-                    "late_pct": row.get("late_pct", 0),
-                },
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [float(lng), float(lat)],
-                },
-            }
-        )
+        features.append({
+            "type": "Feature",
+            "properties": {
+                "stop_id": row.get("stop_id", ""),
+                "stop_name": row.get("stop_name", ""),
+                "municipality": row.get("municipality", ""),
+                "avg_delay_minutes": row.get("avg_delay_minutes", 0),
+                "delay_hotspot_score": row.get("delay_hotspot_score", 0),
+                "routes_served": row.get("routes_served", 0),
+                "alert_count": row.get("active_alert_count", 0),
+                "late_pct": row.get("late_pct", 0),
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(lng), float(lat)],
+            },
+        })
 
     return {"type": "FeatureCollection", "features": features}
-
-
-@router.get(
-    "/{stop_id}/details",
-    summary="Detailed stats for a specific station",
-)
-async def get_station_details(request: Request, stop_id: str):
-    bq = request.app.state.bq_service
-    rows = await bq.query_from_file(
-        "stations_detail.sql", params={"stop_id": stop_id}
-    )
-    if not rows:
-        return {"error": f"No data for station {stop_id}"}
-    return {"data": rows[0]}

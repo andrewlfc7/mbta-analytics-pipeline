@@ -199,6 +199,16 @@ export async function getTemperatureScatter(params?: { route_id?: string }) {
   });
 }
 
+// ---------- Weather (enhanced) ----------
+export async function getCurrentWeather() {
+  return apiFetch<any>("/weather/current");
+}
+
+export async function getWeatherDelayImpact() {
+  return apiFetch<any>("/weather/delay-impact");
+}
+
+
 export async function getWindScatter(params?: { route_id?: string }) {
   return apiFetch<any>("/weather/scatter/wind", { params: params as any });
 }
