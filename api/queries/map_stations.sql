@@ -1,28 +1,47 @@
-SELECT
-  sp.stop_id,
-  sp.stop_name,
-  sp.municipality,
-  sp.latitude,
-  sp.longitude,
-  sp.avg_delay_seconds,
-  ROUND(sp.avg_delay_seconds / 60.0, 1) AS avg_delay_minutes,
-  sp.late_pct,
-  sp.routes_served,
-  sp.delay_hotspot_score,
-  COALESCE(aa.alert_count, 0) AS active_alert_count
-FROM `{project}.marts.mart_stop_performance` sp
-LEFT JOIN (
+WITH station_delays AS (
+  SELECT
+    s.stop_id,
+    s.stop_name,
+    s.municipality,
+    CAST(s.stop_lat AS FLOAT64) AS latitude,
+    CAST(s.stop_lon AS FLOAT64) AS longitude,
+    ROUND(AVG(sa.delay_seconds), 1) AS avg_delay_seconds,
+    ROUND(AVG(sa.delay_seconds) / 60.0, 1) AS avg_delay_minutes,
+    ROUND(SAFE_DIVIDE(
+      COUNTIF(sa.delay_seconds > 120),
+      COUNT(*)
+    ) * 100, 1) AS late_pct,
+    COUNT(DISTINCT sa.route_id) AS routes_served,
+    ROUND(
+      AVG(sa.delay_seconds) / 60.0 * 0.4
+      + SAFE_DIVIDE(COUNTIF(sa.delay_seconds > 120), COUNT(*)) * 100 * 0.3
+      + COUNT(DISTINCT sa.route_id) * 0.3,
+      1
+    ) AS delay_hotspot_score
+  FROM `{project}.raw_mbta.raw_stops` s
+  JOIN `{project}.intermediate.int_scheduled_vs_actual` sa ON s.stop_id = sa.stop_id
+  WHERE s.stop_lat IS NOT NULL
+    AND s.stop_lon IS NOT NULL
+  GROUP BY s.stop_id, s.stop_name, s.municipality, s.stop_lat, s.stop_lon
+),
+active_alerts AS (
   SELECT
     stop_ref AS stop_id,
-    COUNT(DISTINCT a.alert_id) AS alert_count
-  FROM `{project}.marts.mart_alert_summary` a,
-  UNNEST(IFNULL(
-    REGEXP_EXTRACT_ALL(CAST(a.affected_stops AS STRING), r'[A-Za-z0-9\-]+'),
-    ARRAY<STRING>[]
-  )) AS stop_ref
-  WHERE a.is_active = TRUE
+    COUNT(DISTINCT alert_id) AS alert_count
+  FROM `{project}.raw_mbta.raw_alerts` a
+  CROSS JOIN UNNEST(
+    IFNULL(
+      JSON_EXTRACT_STRING_ARRAY(a.affected_stops),
+      ARRAY<STRING>[]
+    )
+  ) AS stop_ref
+  WHERE TIMESTAMP(a.active_start) <= CURRENT_TIMESTAMP()
+    AND (a.active_end IS NULL OR TIMESTAMP(a.active_end) >= CURRENT_TIMESTAMP())
   GROUP BY stop_ref
-) aa ON sp.stop_id = aa.stop_id
-WHERE sp.latitude IS NOT NULL
-  AND sp.longitude IS NOT NULL
-ORDER BY sp.delay_hotspot_score DESC
+)
+SELECT
+  sd.*,
+  COALESCE(aa.alert_count, 0) AS active_alert_count
+FROM station_delays sd
+LEFT JOIN active_alerts aa ON sd.stop_id = aa.stop_id
+ORDER BY sd.delay_hotspot_score DESC

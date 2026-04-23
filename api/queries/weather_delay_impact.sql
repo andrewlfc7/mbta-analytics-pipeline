@@ -1,32 +1,30 @@
 WITH weather_bins AS (
   SELECT
     wt.route_id,
-    wt.route_name,
-    r.route_type_desc,
-    wt.avg_delay_seconds,
-    wt.prediction_count,
-    wt.temperature_2m,
-    wt.wind_speed_10m,
-    wt.precipitation,
+    wt.delay_seconds,
+    wt.temperature_f,
+    wt.wind_speed_mph,
+    wt.precipitation_mm,
+    wt.weather_condition,
     CASE
-      WHEN wt.precipitation > 0.1 THEN 'Rain'
-      WHEN wt.wind_speed_10m > 15 THEN 'High Wind'
-      WHEN wt.temperature_2m < 32 THEN 'Freezing'
-      WHEN wt.temperature_2m > 90 THEN 'Extreme Heat'
+      WHEN wt.is_precipitation = TRUE THEN 'Precipitation'
+      WHEN wt.is_high_wind = TRUE THEN 'High Wind'
+      WHEN wt.temperature_f < 32 THEN 'Freezing'
+      WHEN wt.temperature_f > 90 THEN 'Extreme Heat'
+      WHEN wt.is_low_visibility = TRUE THEN 'Low Visibility'
       ELSE 'Normal'
-    END AS weather_condition
+    END AS condition_category
   FROM `{project}.intermediate.int_weather_transit` wt
-  JOIN `{project}.raw_mbta.raw_routes` r ON wt.route_id = r.route_id
-  WHERE wt.prediction_count >= 3
+  WHERE wt.delay_seconds IS NOT NULL
 )
 SELECT
-  weather_condition,
+  condition_category,
   COUNT(*) AS observation_count,
-  ROUND(AVG(avg_delay_seconds) / 60.0, 1) AS avg_delay_minutes,
-  ROUND(AVG(prediction_count), 0) AS avg_trips,
-  ROUND(AVG(temperature_2m), 1) AS avg_temp,
-  ROUND(AVG(wind_speed_10m), 1) AS avg_wind,
-  ROUND(AVG(precipitation), 2) AS avg_precip
+  ROUND(AVG(delay_seconds) / 60.0, 1) AS avg_delay_minutes,
+  COUNT(DISTINCT route_id) AS routes_affected,
+  ROUND(AVG(temperature_f), 1) AS avg_temp,
+  ROUND(AVG(wind_speed_mph), 1) AS avg_wind,
+  ROUND(AVG(precipitation_mm), 2) AS avg_precip
 FROM weather_bins
-GROUP BY weather_condition
+GROUP BY condition_category
 ORDER BY avg_delay_minutes DESC

@@ -3,7 +3,6 @@ SELECT
   relative_humidity_2m AS humidity,
   wind_speed_10m AS wind_mph,
   precipitation AS precip_in,
-  cloud_cover,
   weather_code,
   CASE
     WHEN weather_code IN (0, 1) THEN 'Clear'
