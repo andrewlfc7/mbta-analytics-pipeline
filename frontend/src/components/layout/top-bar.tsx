@@ -5,7 +5,7 @@ import { Cloud, Clock } from "lucide-react";
 
 export function TopBar() {
   const [time, setTime] = useState("");
-  const [weather, setWeather] = useState({ temp: "--", condition: "" });
+  const [weather, setWeather] = useState({ temp: "--" });
 
   useEffect(() => {
     const updateTime = () => {
@@ -31,14 +31,11 @@ export function TopBar() {
           setWeather({
             temp: overview.avg_temp_f
               ? `${Math.round(overview.avg_temp_f)}F`
-              : overview.current_temp
-                ? `${Math.round(overview.current_temp)}F`
-                : "--",
-            condition: overview.condition || "",
+              : "--",
           });
         }
       } catch {
-        setWeather({ temp: "--", condition: "" });
+        setWeather({ temp: "--" });
       }
     }
     fetchWeather();
@@ -47,8 +44,7 @@ export function TopBar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#1E293B] bg-[#0F172A]/80 backdrop-blur-md px-6">
-      <div />
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-end border-b border-[#1E293B] bg-[#0F172A]/80 backdrop-blur-md px-6">
       <div className="flex items-center gap-5">
         <div className="flex items-center gap-2 text-slate-400">
           <Cloud className="h-4 w-4" />
@@ -57,14 +53,6 @@ export function TopBar() {
         <div className="flex items-center gap-2 text-slate-400">
           <Clock className="h-4 w-4" />
           <span className="text-[13px]">{time}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
-            AK
-          </div>
-          <span className="text-[13px] text-slate-300 hidden sm:inline">
-            Andrew K.
-          </span>
         </div>
       </div>
     </header>
