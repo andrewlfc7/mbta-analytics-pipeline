@@ -31,11 +31,12 @@ class BigQueryLoader:
         "predictions": {"table": "raw_predictions", "mode": "WRITE_APPEND"},
         "vehicles": {"table": "raw_vehicles", "mode": "WRITE_APPEND"},
         "alerts": {"table": "raw_alerts", "mode": "WRITE_APPEND"},
-        "weather": {"table": "raw_weather", "mode": "WRITE_TRUNCATE"},
+        "weather": {"table": "raw_weather", "mode": "WRITE_APPEND"},
     }
 
     DEDUPE_KEYS = {
         "schedules": ["schedule_id"],
+        "weather": ["timestamp"],
         "predictions": ["prediction_id", "extracted_at"],
         "vehicles": ["vehicle_id", "extracted_at"],
         "alerts": ["alert_id", "extracted_at"],
