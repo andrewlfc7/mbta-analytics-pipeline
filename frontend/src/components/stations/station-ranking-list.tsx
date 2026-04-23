@@ -36,8 +36,8 @@ export function StationRankingList({ data, onSelectStation, selectedStation }: P
             const delay = station.avg_delay_minutes ?? station.avg_delay ?? 0;
             const color = getDelayColor(delay);
             const isSelected = selectedStation === stopId;
-            const score = station.hotspot_score ?? station.score ?? 0;
-            const latePercent = station.late_percentage ?? station.late_pct ?? 0;
+            const score = station.delay_hotspot_score ?? station.hotspot_score ?? station.score ?? 0;
+            const latePercent = station.late_pct ?? station.late_percentage ?? 0;
 
             return (
               <button

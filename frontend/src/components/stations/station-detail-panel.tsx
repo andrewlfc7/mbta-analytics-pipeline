@@ -60,7 +60,7 @@ export function StationDetailPanel({ stopId, onClose }: Props) {
             />
             <StatBlock
               label="Hotspot Score"
-              value={(station.hotspot_score ?? station.score ?? 0).toFixed(1)}
+              value={(station.delay_hotspot_score ?? station.hotspot_score ?? station.score ?? 0).toFixed(1)}
             />
             <StatBlock
               label="Routes"
