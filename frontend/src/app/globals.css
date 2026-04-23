@@ -107,3 +107,15 @@
 }
 
 /* Mapbox GL CSS - loaded via CDN in layout instead */
+/* Mapbox popup override for dark theme */
+.mbta-popup .mapboxgl-popup-content {
+  background: #1e293b;
+  border: 1px solid #2d3b4f;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mbta-popup .mapboxgl-popup-tip {
+  border-top-color: #1e293b;
+}
