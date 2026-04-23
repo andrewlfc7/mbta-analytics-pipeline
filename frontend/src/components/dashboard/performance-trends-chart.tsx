@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+
 } from "recharts";
 
 type MetricTab = "on_time" | "avg_delay" | "trips";
@@ -147,7 +147,7 @@ export function PerformanceTrendsChart() {
     trips: "_trips",
   };
 
-  const yAxisLabel: Record<MetricTab, string> = {
+  const _yAxisLabel: Record<MetricTab, string> = {
     on_time: "%",
     avg_delay: "min",
     trips: "trips",

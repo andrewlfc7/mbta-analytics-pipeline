@@ -28,7 +28,7 @@ export default function ReportsPage() {
         if (weatherRes.status === "fulfilled") setWeather(weatherRes.value?.data || []);
       } catch (err) {
         console.error("Reports fetch error:", err);
-        setError(String(err));
+        
       } finally {
         setLoading(false);
       }

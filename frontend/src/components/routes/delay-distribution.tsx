@@ -1,6 +1,6 @@
 "use client";
 
-import { getRouteColor, getRouteDisplayName } from "@/lib/utils";
+import { getRouteDisplayName } from "@/lib/utils";
 import {
   BarChart,
   Bar,

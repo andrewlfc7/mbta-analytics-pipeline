@@ -7,7 +7,7 @@ import mapboxgl from "mapbox-gl";
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 // MBTA route type colors
-const ROUTE_TYPE_COLORS: Record<number, string> = {
+const _ROUTE_TYPE_COLORS: Record<number, string> = {
   0: "#00843D", // Light Rail (Green Line)
   1: "#DA291C", // Heavy Rail (Red/Orange/Blue)
   2: "#8B5CF6", // Commuter Rail

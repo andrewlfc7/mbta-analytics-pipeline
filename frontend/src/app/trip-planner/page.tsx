@@ -5,7 +5,7 @@ import { DashboardCard } from "@/components/ui/dashboard-card";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
-  Route, Search, MapPin, ArrowRight, Clock, Shield, AlertTriangle,
+  Route, Search, ArrowRight, Shield, AlertTriangle,
   Cloud, Thermometer, ChevronDown, Bus, TrainFront, Train, Ship, Repeat2, Zap, CheckCircle2, X
 } from "lucide-react";
 
@@ -290,7 +290,7 @@ export default function TripPlannerPage() {
                   Search for a trip to see recommendations
                 </p>
                 <p className="text-[13px] text-slate-500 mt-1">
-                  We&apos;ll show you the most reliable routes with real-time delay data
+                  We&apos;ll show the most reliable routes with real-time delay data
                 </p>
               </div>
             </DashboardCard>
@@ -313,7 +313,6 @@ export default function TripPlannerPage() {
               ) : (
                 <div className="space-y-3">
                   {sortedOptions.map((option, idx) => {
-                    const Icon1 = MODE_ICON[option.legs[0]?.route_type_desc] || TrainFront;
                     const relColor = RELIABILITY_COLOR[option.reliability.label] || "text-slate-400";
                     const relBg = RELIABILITY_BG[option.reliability.label] || "bg-slate-500/20";
                     const expanded = expandedOption === idx;

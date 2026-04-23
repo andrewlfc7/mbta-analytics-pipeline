@@ -11,9 +11,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+
+
+
 } from "lucide-react";
 
 interface RouteHealth {

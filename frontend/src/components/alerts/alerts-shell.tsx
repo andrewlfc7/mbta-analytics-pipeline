@@ -13,7 +13,7 @@ import {
   AlertOctagon,
   ChevronRight,
   Search,
-  Filter,
+
 } from "lucide-react";
 
 interface AlertItem {

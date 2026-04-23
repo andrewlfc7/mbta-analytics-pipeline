@@ -5,7 +5,7 @@ import { DashboardCard } from "@/components/ui/dashboard-card";
 import { TransitMode, ModeFilterTabs } from "@/components/ui/mode-filter-tabs";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Calendar, Clock, ChevronRight, ArrowRightLeft } from "lucide-react";
+import { Calendar, ChevronRight, ArrowRightLeft } from "lucide-react";
 
 interface ScheduleRoute {
   route_id: string;

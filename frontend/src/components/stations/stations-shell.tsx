@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { MapPin, Search, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { MapPin, Search, AlertTriangle } from "lucide-react";
 
 interface Station {
   stop_id: string;
