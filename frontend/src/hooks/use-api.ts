@@ -15,7 +15,11 @@ function getApiBase() {
     return "/api/proxy";
   }
   // Server-side: call the API directly (no mixed content issue)
-  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://34.30.107.174:8000/api/v1";
+  return (
+    process.env.API_SERVER_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "http://34.30.107.174:8000/api/v1"
+  );
 }
 
 export function useApi<T>(

@@ -1,5 +1,8 @@
-const SERVER_URL = process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const CLIENT_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/proxy";
+const SERVER_URL =
+  process.env.API_SERVER_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "";
+const CLIENT_URL = "/api/proxy";
 
 interface FetchOptions {
   params?: Record<string, string | number | undefined>;
