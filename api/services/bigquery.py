@@ -1,13 +1,14 @@
-from google.cloud import bigquery
-from google.oauth2 import service_account
-from google.api_core.exceptions import GoogleAPIError
 import hashlib
 import json
+import logging
 import os
 import time
-import logging
 from pathlib import Path
 from typing import Any
+
+from google.api_core.exceptions import GoogleAPIError
+from google.cloud import bigquery
+from google.oauth2 import service_account
 
 from api.config import get_settings
 

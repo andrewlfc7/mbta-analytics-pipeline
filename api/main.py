@@ -1,12 +1,13 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 import logging
 import time
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
+from api.routers import alerts, heatmap, overview, quality, routes, stations, temporal, weather
 from api.services.bigquery import BigQueryService
-from api.routers import overview, heatmap, temporal, weather, routes, stations, quality, alerts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

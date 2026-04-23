@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query, Request
-from collections import defaultdict
 import logging
+from collections import defaultdict
+
+from fastapi import APIRouter, Query, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

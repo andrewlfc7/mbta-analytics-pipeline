@@ -1,7 +1,8 @@
 """Helper to fetch bus route IDs for batched ingestion."""
 
-from google.cloud import bigquery
 import logging
+
+from google.cloud import bigquery
 
 logger = logging.getLogger(__name__)
 

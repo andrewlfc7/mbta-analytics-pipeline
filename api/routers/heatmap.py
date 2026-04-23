@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query, Request, HTTPException
 import logging
 
-from api.models.heatmap import HeatmapResponse, CellDetailResponse
+from fastapi import APIRouter, HTTPException, Query, Request
+
+from api.models.heatmap import CellDetailResponse, HeatmapResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

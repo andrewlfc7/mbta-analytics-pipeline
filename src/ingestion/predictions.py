@@ -46,6 +46,7 @@ class PredictionsExtractor(BaseExtractor):
     def params(self) -> dict[str, Any]:
         return {"filter[route]": ",".join(self.RAIL_AND_FERRY_ROUTES)}
 
+
     def extract_for_routes(self, route_ids: list[str]) -> list[dict[str, Any]]:
         """Extract predictions for a specific set of routes.
 
@@ -59,7 +60,6 @@ class PredictionsExtractor(BaseExtractor):
             first_route=route_ids[0],
         )
 
-        original_client_params = None
         try:
             response = self.client.get(
                 self.endpoint,
