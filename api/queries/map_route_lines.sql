@@ -3,7 +3,7 @@ WITH ordered_stops AS (
     sch.route_id,
     r.route_type,
     r.route_type_desc,
-    COALESCE(r.route_color, '7F7F7F') AS route_color,
+    COALESCE(r.color, '7F7F7F') AS route_color,
     s.stop_id,
     s.name AS stop_name,
     s.latitude,
@@ -16,7 +16,7 @@ WITH ordered_stops AS (
     AND s.longitude IS NOT NULL
     AND sch.direction_id = 0
     AND r.route_type IN (0, 1, 2, 4)
-  GROUP BY sch.route_id, r.route_type, r.route_type_desc, r.route_color,
+  GROUP BY sch.route_id, r.route_type, r.route_type_desc, r.color,
            s.stop_id, s.name, s.latitude, s.longitude
 )
 SELECT * FROM ordered_stops
