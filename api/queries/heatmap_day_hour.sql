@@ -22,6 +22,5 @@ WHERE
     OR ('@direction' = 'inbound' AND direction_id = 1)
     OR ('@direction' = 'outbound' AND direction_id = 0)
   )
-  AND service_date >= DATE_SUB(CURRENT_DATE(), INTERVAL @period_days DAY)
 GROUP BY 1, 2, 3
 ORDER BY day_num, hour

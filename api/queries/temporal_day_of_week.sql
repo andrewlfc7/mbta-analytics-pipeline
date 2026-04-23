@@ -16,6 +16,5 @@ SELECT
 FROM `{project}.marts.mart_delay_analysis`
 WHERE
   ('@route_filter' = 'all' OR route_id = '@route_filter')
-  AND service_date >= DATE_SUB(CURRENT_DATE(), INTERVAL @period_days DAY)
 GROUP BY 1, 2
 ORDER BY day_num

@@ -10,6 +10,5 @@ FROM `{project}.marts.mart_delay_analysis`
 WHERE
   ('@route_filter' = 'all' OR route_id = '@route_filter')
   AND ('@day_type' = 'all' OR day_type = '@day_type')
-  AND service_date >= DATE_SUB(CURRENT_DATE(), INTERVAL @period_days DAY)
 GROUP BY hour_of_day, day_type, time_period
 ORDER BY hour_of_day
