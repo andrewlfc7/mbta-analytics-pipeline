@@ -17,6 +17,8 @@ const PERIOD_CONFIG: Record<string, { icon: React.ElementType; color: string; la
   evening_rush: { icon: Sunset, color: "text-amber-400", label: "PM Rush" },
   midday: { icon: Sun, color: "text-purple-400", label: "Midday" },
   evening: { icon: Moon, color: "text-green-400", label: "Evening" },
+  night: { icon: Moon, color: "text-slate-400", label: "Night" },
+  overnight: { icon: Moon, color: "text-slate-400", label: "Overnight" },
   off_peak: { icon: Moon, color: "text-slate-400", label: "Off-Peak" },
 };
 
@@ -39,13 +41,14 @@ export function RushHourCards({ params }: Props) {
       </h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {periodList.map((p: any) => {
-          const key = p.time_period || p.period || "";
+          const rawKey = p.time_period || p.period || "";
+          const key = rawKey.toLowerCase();
           const config = PERIOD_CONFIG[key] || PERIOD_CONFIG.off_peak;
           const Icon = config.icon;
 
           return (
             <div
-              key={key}
+              key={rawKey}
               className="rounded-xl border border-slate-700/50 bg-surface-card p-5"
             >
               <div className="flex items-center gap-2">
@@ -76,7 +79,7 @@ export function RushHourCards({ params }: Props) {
                 <div className="flex justify-between">
                   <span className="text-sm text-content-muted">Trips</span>
                   <span className="text-sm font-medium text-content-primary">
-                    {formatNumber(p.total_trips ?? p.trip_count ?? 0)}
+                    {formatNumber(p.trip_count ?? p.total_trips ?? 0)}
                   </span>
                 </div>
               </div>

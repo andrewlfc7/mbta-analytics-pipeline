@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     google_application_credentials: str = ""
 
     # Cache — 20 min TTL (data updates hourly via DAGs)
-    cache_ttl_seconds: int = 1200
+    cache_ttl_seconds: int = 2700
     cache_dir: str = "/tmp/mbta_api_cache"
 
     # ML Model
