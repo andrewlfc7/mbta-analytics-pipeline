@@ -1,25 +1,18 @@
-WITH alert_route_ids AS (
+WITH alert_routes AS (
   SELECT
     a.alert_id,
-    a.severity,
-    a.header,
-    a.effect,
-    a.is_active,
-    a.impact_score,
-    rid
-  FROM `{project}.marts.mart_alert_summary` a,
-  UNNEST(IFNULL(
-    REGEXP_EXTRACT_ALL(CAST(a.affected_routes AS STRING), r'[A-Za-z0-9\-]+'),
-    ARRAY<STRING>[]
-  )) AS rid
-  WHERE a.is_active = TRUE
+    route_ref.element AS route_id
+  FROM `{project}.raw_mbta.raw_alerts` a,
+  UNNEST(a.affected_routes.list) AS route_ref
+  WHERE TIMESTAMP(a.active_start) <= CURRENT_TIMESTAMP()
+    AND (a.active_end IS NULL OR TIMESTAMP(a.active_end) >= CURRENT_TIMESTAMP())
 ),
 alert_with_mode AS (
   SELECT
     ar.alert_id,
     COALESCE(r.route_type_desc, 'Unknown') AS mode
-  FROM alert_route_ids ar
-  LEFT JOIN `{project}.raw_mbta.raw_routes` r ON ar.rid = r.route_id
+  FROM alert_routes ar
+  LEFT JOIN `{project}.raw_mbta.raw_routes` r ON ar.route_id = r.route_id
 )
 SELECT
   mode,

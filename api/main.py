@@ -71,6 +71,7 @@ app.include_router(stations.router, prefix=f"{settings.api_prefix}/stations", ta
 app.include_router(weather.router, prefix=f"{settings.api_prefix}/weather", tags=["Weather Impact"])
 app.include_router(quality.router, prefix=f"{settings.api_prefix}/quality", tags=["Data Quality"])
 app.include_router(alerts.router, prefix=f"{settings.api_prefix}/alerts", tags=["Alerts"])
+app.include_router(schedules.router, prefix=f"{settings.api_prefix}/schedules", tags=["Schedules"])
 
 
 @app.get("/health")
