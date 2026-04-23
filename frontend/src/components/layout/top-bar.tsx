@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { Cloud, Clock } from "lucide-react";
 import { clientFetch } from "@/lib/api";
 
-export function TopBar() {
+export function TopBar({
+  initialTemp = "--",
+}: {
+  initialTemp?: string;
+}) {
   const [time, setTime] = useState("");
-  const [weather, setWeather] = useState({ temp: "--" });
+  const [weather, setWeather] = useState({ temp: initialTemp });
 
   useEffect(() => {
     const updateTime = () => {
@@ -34,9 +38,12 @@ export function TopBar() {
         setWeather({ temp: "--" });
       }
     }
-    fetchWeather();
+    const weatherInterval = setInterval(fetchWeather, 300000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearInterval(weatherInterval);
+    };
   }, []);
 
   return (

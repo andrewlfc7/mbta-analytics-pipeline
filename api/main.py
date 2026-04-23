@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse
 
 from api.config import get_settings
 from api.routers import alerts, heatmap, overview, quality, routes, schedules, stations, temporal, trip_planner, weather
@@ -39,6 +40,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    default_response_class=ORJSONResponse,
 )
 
 app.add_middleware(

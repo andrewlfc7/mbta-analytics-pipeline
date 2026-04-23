@@ -1,8 +1,10 @@
+import asyncio
 import hashlib
 import json
 import logging
 import os
 import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +22,17 @@ class BigQueryService:
     def __init__(self, project_id: str):
         self.project_id = project_id
         self._client = None
-        self.cache: dict[str, dict[str, Any]] = {}
+        self.cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.cache_dir = Path(settings.cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_stats = {"hits": 0, "misses": 0, "errors": 0}
+        self.cache_stats = {
+            "hits": 0,
+            "misses": 0,
+            "errors": 0,
+            "coalesced": 0,
+        }
+        self._in_flight: dict[str, asyncio.Future[list[dict]]] = {}
+        self._in_flight_lock = asyncio.Lock()
 
     @property
     def client(self):
@@ -48,12 +57,17 @@ class BigQueryService:
         content = query + json.dumps(params or {}, sort_keys=True)
         return hashlib.md5(content.encode()).hexdigest()
 
-    def _get_cached(self, key: str) -> list[dict] | None:
+    def _get_cached(self, key: str, record_stats: bool = True) -> list[dict] | None:
+        now = time.time()
+
         # Check in-memory first
         if key in self.cache:
             entry = self.cache[key]
-            if time.time() - entry["timestamp"] < settings.cache_ttl_seconds:
-                self.cache_stats["hits"] += 1
+            if now - entry["timestamp"] < settings.cache_ttl_seconds:
+                entry["last_access"] = now
+                self.cache.move_to_end(key)
+                if record_stats:
+                    self.cache_stats["hits"] += 1
                 return entry["data"]
             else:
                 del self.cache[key]
@@ -62,27 +76,60 @@ class BigQueryService:
         cache_file = self.cache_dir / f"{key}.json"
         if cache_file.exists():
             stat = cache_file.stat()
-            if time.time() - stat.st_mtime < settings.cache_ttl_seconds:
+            if now - stat.st_mtime < settings.cache_ttl_seconds:
                 try:
                     with open(cache_file) as f:
                         data = json.load(f)
-                    self.cache[key] = {"data": data, "timestamp": stat.st_mtime}
-                    self.cache_stats["hits"] += 1
+                    self.cache[key] = {
+                        "data": data,
+                        "timestamp": stat.st_mtime,
+                        "last_access": now,
+                    }
+                    self._prune_cache()
+                    if record_stats:
+                        self.cache_stats["hits"] += 1
                     return data
                 except (json.JSONDecodeError, OSError):
                     pass
 
-        self.cache_stats["misses"] += 1
+        if record_stats:
+            self.cache_stats["misses"] += 1
         return None
 
     def _set_cached(self, key: str, data: list[dict]):
-        self.cache[key] = {"data": data, "timestamp": time.time()}
+        now = time.time()
+        self.cache[key] = {
+            "data": data,
+            "timestamp": now,
+            "last_access": now,
+        }
+        self.cache.move_to_end(key)
+        self._prune_cache()
         try:
             cache_file = self.cache_dir / f"{key}.json"
             with open(cache_file, "w") as f:
                 json.dump(data, f, default=str)
         except OSError as e:
             logger.warning(f"Failed to write cache file: {e}")
+
+    def _prune_cache(self):
+        while len(self.cache) > settings.cache_max_entries:
+            self.cache.popitem(last=False)
+
+    def _get_stale_cached(self, key: str) -> list[dict] | None:
+        entry = self.cache.get(key)
+        if entry is not None:
+            return entry["data"]
+
+        cache_file = self.cache_dir / f"{key}.json"
+        if not cache_file.exists():
+            return None
+
+        try:
+            with open(cache_file) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
 
     def invalidate_cache(self):
         """Clear all caches. Call after DAG runs complete."""
@@ -106,8 +153,20 @@ class BigQueryService:
             "misses": self.cache_stats["misses"],
             "hit_rate_pct": hit_rate,
             "ttl_seconds": settings.cache_ttl_seconds,
+            "max_entries": settings.cache_max_entries,
             "errors": self.cache_stats["errors"],
+            "coalesced": self.cache_stats["coalesced"],
+            "in_flight": len(self._in_flight),
         }
+
+    def _execute_query(self, query: str) -> tuple[list[dict], float, int]:
+        start = time.time()
+        query_job = self.client.query(query)
+        results = query_job.result()
+        rows = [dict(row) for row in results]
+        elapsed = time.time() - start
+        bytes_processed = int(query_job.total_bytes_processed or 0)
+        return rows, elapsed, bytes_processed
 
     async def query(
         self,
@@ -122,31 +181,76 @@ class BigQueryService:
             if cached is not None:
                 return cached
 
+        future: asyncio.Future[list[dict]] | None = None
+        should_execute = True
+
+        if use_cache:
+            async with self._in_flight_lock:
+                cached = self._get_cached(cache_key, record_stats=False)
+                if cached is not None:
+                    return cached
+
+                future = self._in_flight.get(cache_key)
+                if future is None:
+                    future = asyncio.get_running_loop().create_future()
+                    self._in_flight[cache_key] = future
+                else:
+                    should_execute = False
+
+        if not should_execute and future is not None:
+            self.cache_stats["coalesced"] += 1
+            return await future
+
         try:
-            start = time.time()
             logger.info(f"Executing BigQuery query: {cache_key[:8]}...")
-            query_job = self.client.query(query)
-            results = query_job.result()
-            rows = [dict(row) for row in results]
-            elapsed = time.time() - start
+            rows, elapsed, bytes_processed = await asyncio.to_thread(
+                self._execute_query,
+                query,
+            )
 
             if use_cache:
                 self._set_cached(cache_key, rows)
 
             logger.info(
                 f"Query {cache_key[:8]} returned {len(rows)} rows in {elapsed:.2f}s "
-                f"({query_job.total_bytes_processed / 1024:.1f} KB processed)"
+                f"({bytes_processed / 1024:.1f} KB processed)"
             )
+
+            if future is not None and not future.done():
+                future.set_result(rows)
             return rows
 
         except GoogleAPIError as e:
             self.cache_stats["errors"] += 1
             logger.error(f"BigQuery error: {e}")
             # Return stale cache if available
-            if cache_key in self.cache:
+            stale = self._get_stale_cached(cache_key)
+            if stale is not None:
                 logger.warning(f"Returning stale cache for {cache_key[:8]}")
-                return self.cache[cache_key]["data"]
+                if future is not None and not future.done():
+                    future.set_result(stale)
+                return stale
+            if future is not None and not future.done():
+                future.set_exception(e)
             raise
+        except Exception as e:
+            self.cache_stats["errors"] += 1
+            logger.error(f"Unexpected query error: {e}")
+            stale = self._get_stale_cached(cache_key)
+            if stale is not None:
+                logger.warning(f"Returning stale cache for {cache_key[:8]}")
+                if future is not None and not future.done():
+                    future.set_result(stale)
+                return stale
+            if future is not None and not future.done():
+                future.set_exception(e)
+            raise
+        finally:
+            if use_cache:
+                async with self._in_flight_lock:
+                    current = self._in_flight.get(cache_key)
+                    if current is future:
+                        self._in_flight.pop(cache_key, None)
 
     async def query_from_file(
         self,
@@ -166,13 +270,24 @@ class BigQueryService:
         return await self.query(query, params=params, use_cache=use_cache)
 
     async def warm_cache(self):
-        """Warm cache for all common endpoints on startup."""
-        logger.info("Warming cache for all endpoints...")
+        """Warm the exact query shapes hit by the main UI."""
+        logger.info("Warming cache for hot endpoint queries...")
         warmup_queries = [
             # Overview
-            ("overview_system.sql", None),
+            ("overview_system_enhanced.sql", None),
             ("overview_system_prev_week.sql", None),
-            ("overview_route_ranking.sql", None),
+            ("overview_trips_by_mode.sql", None),
+            ("overview_route_ranking_filtered.sql", {"mode": "all", "limit": "5"}),
+            ("overview_route_ranking_filtered.sql", {"mode": "all", "limit": "10"}),
+            ("overview_route_ranking_filtered.sql", {"mode": "bus", "limit": "5"}),
+            ("overview_route_ranking_filtered.sql", {"mode": "subway", "limit": "5"}),
+            ("overview_route_ranking_filtered.sql", {"mode": "commuter_rail", "limit": "5"}),
+            ("overview_route_ranking_filtered.sql", {"mode": "ferry", "limit": "5"}),
+            ("overview_performance_trends.sql", {"day_type": "weekday"}),
+            # Alerts
+            ("alerts_active.sql", {"severity": "all", "limit": "5"}),
+            ("alerts_active.sql", {"severity": "all", "limit": "20"}),
+            ("alerts_by_mode.sql", None),
             # Routes
             ("routes_reliability.sql", None),
             ("routes_hourly.sql", {"route_id": "Red"}),
@@ -189,8 +304,10 @@ class BigQueryService:
             ("temporal_rush_hour.sql", {"route_filter": "all", "period_days": "90"}),
             ("temporal_delay_probability.sql", {"route_filter": "all", "period_days": "90"}),
             # Stations
-            ("stations_performance.sql", {"sort_by": "delay_hotspot_score", "limit": "50"}),
-            ("stations_map.sql", None),
+            ("stations_performance_filtered.sql", {"sort_by": "delay_hotspot_score", "limit": "50"}),
+            ("delay_hotspots.sql", {"limit": "5"}),
+            ("map_route_lines.sql", None),
+            ("map_stations.sql", None),
             # Weather
             ("weather_overview.sql", None),
             ("weather_scatter_temp.sql", None),

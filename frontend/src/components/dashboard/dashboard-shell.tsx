@@ -6,10 +6,10 @@ import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { RoutePerformanceTable } from "@/components/dashboard/route-performance-table";
 import { ActiveAlertsList } from "@/components/dashboard/active-alerts-list";
-import { PerformanceTrendsChart } from "@/components/dashboard/performance-trends-chart";
 import { DelayHotspotsTable } from "@/components/dashboard/delay-hotspots-table";
 import { TripsByModeDonut } from "@/components/dashboard/trips-by-mode-donut";
-import { SystemMap } from "@/components/dashboard/system-map";
+import { LazyPerformanceTrendsChart } from "@/components/dashboard/performance-trends-chart-lazy";
+import { LazySystemMap } from "@/components/dashboard/system-map-lazy";
 import { clientFetch } from "@/lib/api";
 import {
   BarChart3,
@@ -38,19 +38,35 @@ interface SystemData {
   last_updated: string;
 }
 
+interface DashboardSnapshot {
+  system: SystemData;
+  route_ranking: any[];
+  alerts: any[];
+  performance_trends: any[];
+  delay_hotspots: any[];
+  trips_by_mode: any[];
+}
+
 export function DashboardShell() {
   const [mode, setMode] = useState<TransitMode>("all");
   const [data, setData] = useState<SystemData | null>(null);
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const waitingForSnapshot = mode === "all" && loading && !snapshot;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = mode !== "all" ? { mode } : undefined;
-      const json = await clientFetch<SystemData>(
-        "/overview/system",
-        params
-      );
+      if (mode === "all") {
+        const json = await clientFetch<DashboardSnapshot>(
+          "/overview/dashboard-snapshot"
+        );
+        setSnapshot(json);
+        setData(json.system);
+        return;
+      }
+
+      const json = await clientFetch<SystemData>("/overview/system", { mode });
       setData(json);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
@@ -164,13 +180,17 @@ export function DashboardShell() {
               </span>
             }
           >
-            <RoutePerformanceTable mode={mode} />
+            <RoutePerformanceTable
+              mode={mode}
+              initialRows={mode === "all" ? snapshot?.route_ranking : undefined}
+              deferFetch={waitingForSnapshot}
+            />
           </DashboardCard>
         </div>
 
         <div className="col-span-4">
           <DashboardCard title="System Map">
-            <SystemMap />
+            <LazySystemMap />
           </DashboardCard>
         </div>
 
@@ -186,7 +206,10 @@ export function DashboardShell() {
               </a>
             }
           >
-            <ActiveAlertsList mode={mode} />
+            <ActiveAlertsList
+              initialRows={snapshot?.alerts}
+              deferFetch={waitingForSnapshot}
+            />
           </DashboardCard>
         </div>
       </div>
@@ -205,13 +228,19 @@ export function DashboardShell() {
               </a>
             }
           >
-            <PerformanceTrendsChart />
+            <LazyPerformanceTrendsChart
+              initialRows={snapshot?.performance_trends}
+              deferFetch={waitingForSnapshot}
+            />
           </DashboardCard>
         </div>
 
         <div className="col-span-3">
           <DashboardCard title="Top Delay Hotspots">
-            <DelayHotspotsTable />
+            <DelayHotspotsTable
+              initialRows={snapshot?.delay_hotspots}
+              deferFetch={waitingForSnapshot}
+            />
           </DashboardCard>
         </div>
 
@@ -227,7 +256,10 @@ export function DashboardShell() {
               </a>
             }
           >
-            <TripsByModeDonut />
+            <TripsByModeDonut
+              initialRows={snapshot?.trips_by_mode}
+              deferFetch={waitingForSnapshot}
+            />
           </DashboardCard>
         </div>
       </div>

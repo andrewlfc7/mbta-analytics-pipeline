@@ -27,42 +27,67 @@ const modeLabels: Record<string, string> = {
   ferry: "Ferry",
 };
 
-export function TripsByModeDonut() {
+function mapModeData(rows: any[]): { totalTrips: number; modes: ModeData[] } {
+  const totalTrips = rows.reduce(
+    (sum: number, r: any) => sum + (r.trips || 0),
+    0
+  );
+
+  return {
+    totalTrips,
+    modes: rows.map((r: any) => {
+      const modeKey = (r.mode || "")
+        .toLowerCase()
+        .replace(/ /g, "_");
+      return {
+        mode: modeKey,
+        label: modeLabels[modeKey] || r.mode || "Unknown",
+        trips: r.trips || 0,
+        percentage:
+          totalTrips > 0
+            ? Math.round((r.trips / totalTrips) * 100)
+            : 0,
+        color: modeColors[modeKey] || "#64748B",
+      };
+    }),
+  };
+}
+
+export function TripsByModeDonut({
+  initialRows,
+  deferFetch = false,
+}: {
+  initialRows?: any[];
+  deferFetch?: boolean;
+}) {
   const [data, setData] = useState<ModeData[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialRows) ? false : deferFetch);
 
   useEffect(() => {
+    if (initialRows) {
+      const mapped = mapModeData(initialRows);
+      setTotal(mapped.totalTrips);
+      setData(mapped.modes);
+      setLoading(false);
+      return;
+    }
+
+    if (deferFetch) {
+      setLoading(true);
+      return;
+    }
+
     async function fetchData() {
+      setLoading(true);
       try {
         const json = await clientFetch<{ data: any[] }>(
           "/overview/trips-by-mode"
         );
 
-        const rows = json.data || [];
-        const totalTrips = rows.reduce(
-          (sum: number, r: any) => sum + (r.trips || 0),
-          0
-        );
-
-        setTotal(totalTrips);
-        setData(
-          rows.map((r: any) => {
-            const modeKey = (r.mode || "")
-              .toLowerCase()
-              .replace(/ /g, "_");
-            return {
-              mode: modeKey,
-              label: modeLabels[modeKey] || r.mode || "Unknown",
-              trips: r.trips || 0,
-              percentage:
-                totalTrips > 0
-                  ? Math.round((r.trips / totalTrips) * 100)
-                  : 0,
-              color: modeColors[modeKey] || "#64748B",
-            };
-          })
-        );
+        const mapped = mapModeData(json.data || []);
+        setTotal(mapped.totalTrips);
+        setData(mapped.modes);
       } catch (err) {
         console.error("Trips by mode fetch error:", err);
       } finally {
@@ -70,7 +95,7 @@ export function TripsByModeDonut() {
       }
     }
     fetchData();
-  }, []);
+  }, [deferFetch, initialRows]);
 
   if (loading) {
     return (
