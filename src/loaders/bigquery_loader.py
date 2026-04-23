@@ -27,7 +27,7 @@ class BigQueryLoader:
         "routes": {"table": "raw_routes", "mode": "WRITE_TRUNCATE"},
         "stops": {"table": "raw_stops", "mode": "WRITE_TRUNCATE"},
         "trips": {"table": "raw_trips", "mode": "WRITE_TRUNCATE"},
-        "schedules": {"table": "raw_schedules", "mode": "WRITE_TRUNCATE"},
+        "schedules": {"table": "raw_schedules", "mode": "WRITE_APPEND"},
         "predictions": {"table": "raw_predictions", "mode": "WRITE_APPEND"},
         "vehicles": {"table": "raw_vehicles", "mode": "WRITE_APPEND"},
         "alerts": {"table": "raw_alerts", "mode": "WRITE_APPEND"},
@@ -35,6 +35,7 @@ class BigQueryLoader:
     }
 
     DEDUPE_KEYS = {
+        "schedules": ["schedule_id"],
         "predictions": ["prediction_id", "extracted_at"],
         "vehicles": ["vehicle_id", "extracted_at"],
         "alerts": ["alert_id", "extracted_at"],
