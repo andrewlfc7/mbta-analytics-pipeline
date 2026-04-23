@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
+import { TopBar } from "@/components/layout/top-bar";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MBTA Analytics Dashboard",
-  description: "Real-time performance analytics for the MBTA transit system",
+  title: "MBTA Transit Intelligence",
+  description:
+    "Real-time transit analytics and intelligence for the MBTA system",
 };
 
 export default function RootLayout({
@@ -23,11 +25,14 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-[#0F172A] text-slate-100`}>
         <Sidebar />
-        <main className="ml-60 min-h-screen transition-all duration-300">
-          <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
-        </main>
+        <div className="ml-[220px] min-h-screen transition-all duration-300">
+          <TopBar />
+          <main>
+            <div className="mx-auto max-w-[1400px] px-6 py-6">{children}</div>
+          </main>
+        </div>
       </body>
     </html>
   );

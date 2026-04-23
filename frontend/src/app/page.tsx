@@ -1,42 +1,46 @@
 import { Suspense } from "react";
-import { PageHeader } from "@/components/layout/page-header";
-import { CardSkeleton, TableSkeleton } from "@/components/ui/loading";
-import { DashboardKPIs } from "@/components/dashboard/kpi-cards";
-import { RouteRankingTable } from "@/components/dashboard/route-ranking-table";
-import { RushHourChart } from "@/components/dashboard/rush-hour-chart";
-import { AlertsFeed } from "@/components/dashboard/alerts-feed";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="MBTA Analytics Dashboard"
-        description="System-wide performance overview and real-time insights"
-      />
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardShell />
+    </Suspense>
+  );
+}
 
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <CardSkeleton key={i} className="h-32" />
-            ))}
-          </div>
-        }
-      >
-        <DashboardKPIs />
-      </Suspense>
-
-      <Suspense fallback={<TableSkeleton rows={7} />}>
-        <RouteRankingTable />
-      </Suspense>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Suspense fallback={<CardSkeleton className="h-80" />}>
-          <RushHourChart />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton className="h-80" />}>
-          <AlertsFeed />
-        </Suspense>
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="h-8 w-64 bg-[#1E293B] rounded-lg animate-pulse" />
+          <div className="h-4 w-96 bg-[#1E293B] rounded mt-2 animate-pulse" />
+        </div>
+        <div className="flex gap-2">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="h-9 w-24 bg-[#1E293B] rounded-lg animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
+          <div
+            key={i}
+            className="h-24 bg-[#1E293B] rounded-xl animate-pulse"
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="h-80 bg-[#1E293B] rounded-xl animate-pulse"
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,60 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Train,
-  Clock,
-  Grid3X3,
-  TrendingUp,
+  Route,
+  Bell,
+  Calendar,
+  HeartPulse,
   MapPin,
-  Cloud,
-  Shield,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Activity,
+  BarChart3,
+  FileText,
+  Zap,
+  Bookmark,
+  Settings,
+  Menu,
+  RefreshCw,
 } from "lucide-react";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  children?: { label: string; href: string }[];
 }
 
 const navigation: NavItem[] = [
+  { label: "Trip Planner", href: "/trip-planner", icon: Route },
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Routes", href: "/routes", icon: Train },
-  {
-    label: "Delays",
-    href: "/delays",
-    icon: Clock,
-    children: [
-      { label: "Heatmap", href: "/delays" },
-      { label: "Temporal", href: "/delays/temporal" },
-    ],
-  },
+  { label: "Alerts", href: "/alerts", icon: Bell },
+  { label: "Schedules", href: "/schedules", icon: Calendar },
+  { label: "Service Health", href: "/service-health", icon: HeartPulse },
   { label: "Stations", href: "/stations", icon: MapPin },
-  { label: "Weather", href: "/weather", icon: Cloud },
-  { label: "Quality", href: "/quality", icon: Shield },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Reports", href: "/reports", icon: FileText },
+  { label: "API Explorer", href: "/api-explorer", icon: Zap },
+  { label: "Saved Views", href: "/saved-views", icon: Bookmark },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<string[]>(["Delays"]);
+  const [alertCount, setAlertCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState("--");
 
-  const toggleExpand = (label: string) => {
-    setExpandedItems((prev) =>
-      prev.includes(label)
-        ? prev.filter((item) => item !== label)
-        : [...prev, label]
-    );
-  };
+  useEffect(() => {
+    async function fetchAlertCount() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/overview/system`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setAlertCount(data.active_alerts ?? 0);
+          const ts = data.last_updated;
+          if (ts) {
+            const d = new Date(ts);
+            const now = new Date();
+            const diffMin = Math.floor(
+              (now.getTime() - d.getTime()) / 60000
+            );
+            if (diffMin < 1) setLastUpdated("Just now");
+            else if (diffMin < 60) setLastUpdated(`${diffMin} min ago`);
+            else setLastUpdated(`${Math.floor(diffMin / 60)} hr ago`);
+          }
+        }
+      } catch {
+        setAlertCount(0);
+      }
+    }
+    fetchAlertCount();
+    const interval = setInterval(fetchAlertCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -64,135 +84,91 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-slate-700/50 bg-surface-card transition-all duration-300",
-        collapsed ? "w-16" : "w-60"
+        "fixed left-0 top-0 z-40 h-screen bg-[#0B1629] border-r border-[#1E293B] transition-all duration-300 flex flex-col",
+        collapsed ? "w-[68px]" : "w-[220px]"
       )}
     >
-      <div className="flex h-full flex-col">
-        {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-700/50 px-4">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-brand-accent" />
-              <span className="text-sm font-semibold text-content-primary">
-                MBTA Analytics
-              </span>
-            </div>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 h-16 border-b border-[#1E293B] shrink-0">
+        {!collapsed && (
+          <div className="flex flex-col">
+            <span className="text-[13px] font-bold text-white tracking-wide">
+              MBTA
+            </span>
+            <span className="text-[10px] font-medium text-slate-400 -mt-0.5">
+              Transit Intelligence
+            </span>
+          </div>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition-colors",
+            collapsed && "mx-auto"
           )}
-          {collapsed && (
-            <Activity className="mx-auto h-5 w-5 text-brand-accent" />
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn(
-              "rounded-md p-1 text-content-muted hover:bg-slate-700/50 hover:text-content-primary transition-colors",
-              collapsed && "mx-auto mt-0"
-            )}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <ul className="space-y-0.5">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            const showBadge = item.label === "Alerts" && alertCount > 0;
+
+            return (
+              <li key={item.label}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                    active
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  )}
+                >
+                  <div className="relative shrink-0">
+                    <Icon className="h-[18px] w-[18px]" />
+                    {showBadge && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                        {alertCount > 99 ? "99+" : alertCount}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Footer */}
+      {!collapsed && (
+        <div className="shrink-0 border-t border-[#1E293B] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] font-medium text-slate-300">
+              Data updated
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-0.5 ml-4">
+            {lastUpdated}
+          </p>
+          <button className="flex items-center gap-1.5 mt-1.5 ml-4 text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+            <RefreshCw className="h-3 w-3" />
+            Refresh
           </button>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-2 py-4">
-          <ul className="space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              const expanded = expandedItems.includes(item.label);
-              const hasChildren = item.children && item.children.length > 0;
-
-              return (
-                <li key={item.label}>
-                  {hasChildren ? (
-                    <>
-                      <button
-                        onClick={() => toggleExpand(item.label)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                          active
-                            ? "bg-brand-accent/10 text-brand-accent"
-                            : "text-content-muted hover:bg-slate-700/30 hover:text-content-primary"
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 text-left">
-                              {item.label}
-                            </span>
-                            <ChevronDown
-                              className={cn(
-                                "h-3 w-3 transition-transform",
-                                expanded && "rotate-180"
-                              )}
-                            />
-                          </>
-                        )}
-                      </button>
-                      {!collapsed && expanded && (
-                        <ul className="ml-7 mt-1 space-y-1 border-l border-slate-700/50 pl-3">
-                          {item.children!.map((child) => (
-                            <li key={child.href}>
-                              <Link
-                                href={child.href}
-                                className={cn(
-                                  "block rounded-md px-3 py-1.5 text-sm transition-colors",
-                                  pathname === child.href
-                                    ? "text-brand-accent"
-                                    : "text-content-muted hover:text-content-primary"
-                                )}
-                              >
-                                {child.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-brand-accent/10 text-brand-accent"
-                          : "text-content-muted hover:bg-slate-700/30 hover:text-content-primary"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Footer */}
-        {!collapsed && (
-          <div className="border-t border-slate-700/50 p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-status-success animate-pulse" />
-              <span className="text-xs text-content-muted">API Connected</span>
-            </div>
-            <div className="mt-1 flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-status-success" />
-              <span className="text-xs text-content-muted">Status: Live</span>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className="border-t border-slate-700/50 p-4 flex justify-center">
-            <div className="h-2 w-2 rounded-full bg-status-success animate-pulse" />
-          </div>
-        )}
-      </div>
+      )}
+      {collapsed && (
+        <div className="shrink-0 border-t border-[#1E293B] py-3 flex justify-center">
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+        </div>
+      )}
     </aside>
   );
 }
