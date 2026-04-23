@@ -8,17 +8,16 @@ interface Props {
 }
 
 export function PipelineHealthCards({ data }: Props) {
-  const overview = data?.data || data || {};
-  const tables = overview.tables || overview.table_details || [];
-  const tableCount = Array.isArray(tables) ? tables.length : overview.table_count ?? 0;
-  const totalRows = overview.total_rows ?? overview.total_records ?? 0;
-  const allHealthy =
-    overview.status === "healthy" ||
-    overview.all_healthy === true ||
-    (Array.isArray(tables) &&
-      tables.every(
-        (t: any) => t.status === "healthy" || t.status === "Healthy"
-      ));
+  const raw = data?.data || data || {};
+  // API returns { data: [...tables] } directly as an array
+  const tables = Array.isArray(raw) ? raw : raw.tables || raw.table_details || [];
+  const tableList = Array.isArray(tables) ? tables : [];
+  
+  const tableCount = tableList.length;
+  const totalRows = tableList.reduce((sum: number, t: any) => sum + (t.row_count ?? t.rows ?? 0), 0);
+  const allHealthy = tableCount > 0 && tableList.every(
+    (t: any) => (t.row_count ?? 0) > 0
+  );
 
   const cards = [
     {

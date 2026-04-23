@@ -65,7 +65,7 @@ export function WindScatter({ params }: Props) {
       ) : (
         <div className="mt-6 h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ScatterChart margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis
                 type="number"

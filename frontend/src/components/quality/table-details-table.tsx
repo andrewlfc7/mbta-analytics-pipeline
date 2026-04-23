@@ -8,8 +8,8 @@ interface Props {
 }
 
 export function TableDetailsTable({ data }: Props) {
-  const overview = data?.data || data || {};
-  const tables = overview.tables || overview.table_details || [];
+  const raw = data?.data || data || {};
+  const tables = Array.isArray(raw) ? raw : raw.tables || raw.table_details || [];
   const tableList = Array.isArray(tables) ? tables : [];
 
   if (tableList.length === 0) return null;
@@ -41,13 +41,10 @@ export function TableDetailsTable({ data }: Props) {
           </thead>
           <tbody className="divide-y divide-slate-700/30">
             {tableList.map((table: any, index: number) => {
-              const name =
-                table.table_name || table.name || `Table ${index + 1}`;
+              const name = table.table_name || table.name || `Table ${index + 1}`;
               const rows = table.row_count ?? table.rows ?? 0;
-              const routes = table.route_count ?? table.routes ?? null;
-              const status = table.status || "healthy";
-              const isHealthy =
-                status.toLowerCase() === "healthy" || status.toLowerCase() === "ok";
+              const routes = table.unique_routes ?? table.route_count ?? null;
+              const isHealthy = rows > 0;
 
               return (
                 <tr
@@ -63,7 +60,7 @@ export function TableDetailsTable({ data }: Props) {
                     {formatNumber(rows)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-content-muted">
-                    {routes !== null ? routes : "-"}
+                    {routes !== null && routes !== 0 ? routes : "—"}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -74,12 +71,10 @@ export function TableDetailsTable({ data }: Props) {
                       )}
                       <span
                         className={`text-sm font-medium ${
-                          isHealthy
-                            ? "text-status-success"
-                            : "text-status-warning"
+                          isHealthy ? "text-status-success" : "text-status-warning"
                         }`}
                       >
-                        {isHealthy ? "Healthy" : status}
+                        {isHealthy ? "Healthy" : "Empty"}
                       </span>
                     </div>
                   </td>
