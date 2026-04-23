@@ -26,18 +26,13 @@ WITH station_delays AS (
 ),
 active_alerts AS (
   SELECT
-    stop_ref AS stop_id,
-    COUNT(DISTINCT alert_id) AS alert_count
-  FROM `{project}.raw_mbta.raw_alerts` a
-  CROSS JOIN UNNEST(
-    IFNULL(
-      JSON_EXTRACT_STRING_ARRAY(a.affected_stops),
-      ARRAY<STRING>[]
-    )
-  ) AS stop_ref
+    stop_ref.element AS stop_id,
+    COUNT(DISTINCT a.alert_id) AS alert_count
+  FROM `{project}.raw_mbta.raw_alerts` a,
+  UNNEST(a.affected_stops.list) AS stop_ref
   WHERE TIMESTAMP(a.active_start) <= CURRENT_TIMESTAMP()
     AND (a.active_end IS NULL OR TIMESTAMP(a.active_end) >= CURRENT_TIMESTAMP())
-  GROUP BY stop_ref
+  GROUP BY stop_ref.element
 )
 SELECT
   sd.*,

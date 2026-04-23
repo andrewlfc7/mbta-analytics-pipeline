@@ -41,3 +41,4 @@ great_expectations/uncommitted/
 mbta-sa-key.json
 
 frontend/.env.local
+frontend/.env
