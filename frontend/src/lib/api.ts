@@ -161,3 +161,11 @@ export async function getScheduleTimetable(routeId: string, directionId: number 
 export async function getStopDepartures(stopId: string) {
   return apiFetch<any>("/schedules/stop", { params: { stop_id: stopId } });
 }
+
+// ---------- Trip Planner ----------
+export async function searchStops(query: string) {
+  return apiFetch<any>("/trip/search-stops", { params: { q: query } });
+}
+export async function findRoutes(origin: string, destination: string) {
+  return apiFetch<any>("/trip/find-routes", { params: { origin, destination } });
+}

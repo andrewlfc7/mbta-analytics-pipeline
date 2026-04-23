@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
-from api.routers import alerts, heatmap, overview, quality, routes, schedules, stations, temporal, weather
+from api.routers import alerts, heatmap, overview, quality, routes, schedules, stations, temporal, trip_planner, weather
 from api.services.bigquery import BigQueryService
 
 logging.basicConfig(level=logging.INFO)
@@ -72,6 +72,7 @@ app.include_router(weather.router, prefix=f"{settings.api_prefix}/weather", tags
 app.include_router(quality.router, prefix=f"{settings.api_prefix}/quality", tags=["Data Quality"])
 app.include_router(alerts.router, prefix=f"{settings.api_prefix}/alerts", tags=["Alerts"])
 app.include_router(schedules.router, prefix=f"{settings.api_prefix}/schedules", tags=["Schedules"])
+app.include_router(trip_planner.router, prefix=f"{settings.api_prefix}/trip", tags=["Trip Planner"])
 
 
 @app.get("/health")
