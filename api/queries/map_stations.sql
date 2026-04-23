@@ -1,10 +1,10 @@
 WITH station_delays AS (
   SELECT
     s.stop_id,
-    s.stop_name,
+    s.name AS stop_name,
     s.municipality,
-    CAST(s.stop_lat AS FLOAT64) AS latitude,
-    CAST(s.stop_lon AS FLOAT64) AS longitude,
+    s.latitude,
+    s.longitude,
     ROUND(AVG(sa.delay_seconds), 1) AS avg_delay_seconds,
     ROUND(AVG(sa.delay_seconds) / 60.0, 1) AS avg_delay_minutes,
     ROUND(SAFE_DIVIDE(
@@ -20,9 +20,9 @@ WITH station_delays AS (
     ) AS delay_hotspot_score
   FROM `{project}.raw_mbta.raw_stops` s
   JOIN `{project}.intermediate.int_scheduled_vs_actual` sa ON s.stop_id = sa.stop_id
-  WHERE s.stop_lat IS NOT NULL
-    AND s.stop_lon IS NOT NULL
-  GROUP BY s.stop_id, s.stop_name, s.municipality, s.stop_lat, s.stop_lon
+  WHERE s.latitude IS NOT NULL
+    AND s.longitude IS NOT NULL
+  GROUP BY s.stop_id, s.name, s.municipality, s.latitude, s.longitude
 ),
 active_alerts AS (
   SELECT
