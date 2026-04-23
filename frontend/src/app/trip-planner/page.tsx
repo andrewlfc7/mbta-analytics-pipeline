@@ -272,7 +272,7 @@ export default function TripPlannerPage() {
                 </div>
                 <div className="text-center">
                   <Cloud className="h-4 w-4 text-cyan-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-white">{(result.weather.precip_in || 0).toFixed(1)}"</p>
+                  <p className="text-lg font-bold text-white">{(result.weather.precip_in || 0).toFixed(1)}&quot;</p>
                   <p className="text-[10px] text-slate-500">precip</p>
                 </div>
               </div>

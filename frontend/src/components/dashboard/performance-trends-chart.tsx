@@ -147,12 +147,6 @@ export function PerformanceTrendsChart() {
     trips: "_trips",
   };
 
-  const _yAxisLabel: Record<MetricTab, string> = {
-    on_time: "%",
-    avg_delay: "min",
-    trips: "trips",
-  };
-
   // Lines to render: "all" + each mode
   const lineKeys = ["all", ...modes];
 

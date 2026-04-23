@@ -74,7 +74,7 @@ export default function APIExplorerPage() {
   const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set(["Overview"]));
   const [copied, setCopied] = useState(false);
 
-  const tags = [...new Set(ENDPOINTS.map((e) => e.tag))];
+  const tags = Array.from(new Set(ENDPOINTS.map((e) => e.tag)));
 
   const toggleTag = (tag: string) => {
     setExpandedTags((prev) => {

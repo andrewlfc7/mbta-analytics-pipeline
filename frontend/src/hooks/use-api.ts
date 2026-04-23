@@ -30,7 +30,10 @@ export function useApi<T>(
   const enabled = options?.enabled !== false;
   const serializedParams = JSON.stringify(params);
   const paramsRef = useRef(params);
-  paramsRef.current = params;
+
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
   const fetchData = useCallback(async () => {
     if (!enabled) {
@@ -73,11 +76,11 @@ export function useApi<T>(
     } finally {
       setLoading(false);
     }
-  }, [endpoint, serializedParams, enabled]);
+  }, [endpoint, enabled]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, serializedParams]);
 
   return { data, loading, error, refetch: fetchData };
 }

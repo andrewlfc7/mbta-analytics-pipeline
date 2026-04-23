@@ -11,7 +11,6 @@ export default function ReportsPage() {
   const [routes, setRoutes] = useState<any[]>([]);
   const [weather, setWeather] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchAll() {
