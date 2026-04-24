@@ -7,7 +7,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from api.config import get_settings
-from api.routers import alerts, heatmap, overview, quality, routes, schedules, stations, temporal, trip_planner, weather
+from api.routers import (
+    alerts,
+    assistant,
+    heatmap,
+    overview,
+    quality,
+    routes,
+    schedules,
+    stations,
+    temporal,
+    trip_planner,
+    weather,
+)
 from api.services.bigquery import BigQueryService
 
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +85,7 @@ app.include_router(stations.router, prefix=f"{settings.api_prefix}/stations", ta
 app.include_router(weather.router, prefix=f"{settings.api_prefix}/weather", tags=["Weather Impact"])
 app.include_router(quality.router, prefix=f"{settings.api_prefix}/quality", tags=["Data Quality"])
 app.include_router(alerts.router, prefix=f"{settings.api_prefix}/alerts", tags=["Alerts"])
+app.include_router(assistant.router, prefix=f"{settings.api_prefix}/assistant", tags=["Assistant"])
 app.include_router(schedules.router, prefix=f"{settings.api_prefix}/schedules", tags=["Schedules"])
 app.include_router(trip_planner.router, prefix=f"{settings.api_prefix}/trip", tags=["Trip Planner"])
 

@@ -25,12 +25,11 @@ export function SystemMap() {
       return;
     }
 
-    // Initialize map
     const mapInstance = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
-      center: [-71.0589, 42.3601], // Boston
-      zoom: 11.5,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: [-71.0589, 42.3601],
+      zoom: 11.2,
       attributionControl: false,
       interactive: true,
     });
@@ -44,18 +43,14 @@ export function SystemMap() {
 
     mapInstance.on("load", async () => {
       try {
-        const data = await clientFetch<SystemMapData>(
-          "/stations/map/system"
-        );
+        const data = await clientFetch<SystemMapData>("/stations/map/system");
 
-        // Add route lines
         if (data.routes?.features?.length > 0) {
           mapInstance.addSource("route-lines", {
             type: "geojson",
             data: data.routes,
           });
 
-          // Add a line layer for each route type for proper coloring
           mapInstance.addLayer({
             id: "route-lines-layer",
             type: "line",
@@ -69,25 +64,23 @@ export function SystemMap() {
               "line-width": [
                 "match",
                 ["get", "route_type"],
-                0, 3,    // Light Rail
-                1, 3,    // Heavy Rail
-                2, 2,    // Commuter Rail
-                4, 2,    // Ferry
-                1.5,     // Default
+                0, 3,
+                1, 3,
+                2, 2,
+                4, 2,
+                1.5,
               ],
-              "line-opacity": 0.8,
+              "line-opacity": 0.85,
             },
           });
         }
 
-        // Add station points
         if (data.stations?.features?.length > 0) {
           mapInstance.addSource("stations", {
             type: "geojson",
             data: data.stations,
           });
 
-          // Alert stations — larger, red
           mapInstance.addLayer({
             id: "stations-alerts",
             type: "circle",
@@ -98,18 +91,16 @@ export function SystemMap() {
                 "interpolate",
                 ["linear"],
                 ["get", "alert_count"],
-                1, 8,
-                5, 14,
+                1, 10,
+                5, 16,
               ],
               "circle-color": "#EF4444",
-              "circle-opacity": 0.6,
-              "circle-stroke-width": 2,
-              "circle-stroke-color": "#EF4444",
-              "circle-stroke-opacity": 0.3,
+              "circle-opacity": 0.78,
+              "circle-stroke-width": 4,
+              "circle-stroke-color": "#FEE2E2",
             },
           });
 
-          // Alert count labels
           mapInstance.addLayer({
             id: "stations-alert-labels",
             type: "symbol",
@@ -126,7 +117,6 @@ export function SystemMap() {
             },
           });
 
-          // Regular stations — sized by delay
           mapInstance.addLayer({
             id: "stations-layer",
             type: "circle",
@@ -137,9 +127,9 @@ export function SystemMap() {
                 "interpolate",
                 ["linear"],
                 ["get", "delay_hotspot_score"],
-                0, 3,
-                20, 5,
-                50, 8,
+                0, 4,
+                20, 6,
+                50, 9,
               ],
               "circle-color": [
                 "interpolate",
@@ -150,13 +140,12 @@ export function SystemMap() {
                 6, "#F97316",
                 10, "#EF4444",
               ],
-              "circle-opacity": 0.8,
-              "circle-stroke-width": 1,
-              "circle-stroke-color": "#0F172A",
+              "circle-opacity": 0.82,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#FFFFFF",
             },
           });
 
-          // Station hover popup
           const popup = new mapboxgl.Popup({
             closeButton: false,
             closeOnClick: false,
@@ -173,22 +162,23 @@ export function SystemMap() {
                 const coords = (f.geometry as any).coordinates.slice();
 
                 const html = `
-                  <div style="font-family: Inter, sans-serif; font-size: 12px; max-width: 200px;">
-                    <div style="font-weight: 600; color: #F8FAFC; margin-bottom: 4px;">
+                  <div style="font-family: var(--font-sans), sans-serif; font-size: 12px; max-width: 210px;">
+                    <div style="font-weight: 700; color: #0F172A; margin-bottom: 4px;">
                       ${props.stop_name}
                     </div>
-                    <div style="color: #94A3B8; font-size: 11px;">
-                      Avg delay: <span style="color: ${getDelayColor(props.avg_delay_minutes)}; font-weight: 600;">
+                    <div style="color: #64748B; font-size: 11px;">
+                      Avg delay:
+                      <span style="color: ${getDelayColor(props.avg_delay_minutes)}; font-weight: 700;">
                         ${Number(props.avg_delay_minutes).toFixed(1)} min
                       </span>
                     </div>
-                    <div style="color: #94A3B8; font-size: 11px;">
+                    <div style="color: #64748B; font-size: 11px;">
                       Routes: ${props.routes_served}
                     </div>
                     ${
                       Number(props.alert_count) > 0
-                        ? `<div style="color: #EF4444; font-size: 11px; margin-top: 2px;">
-                            ⚠ ${props.alert_count} active alert${Number(props.alert_count) > 1 ? "s" : ""}
+                        ? `<div style="color: #DC2626; font-size: 11px; margin-top: 4px;">
+                            ${props.alert_count} active alert${Number(props.alert_count) > 1 ? "s" : ""}
                           </div>`
                         : ""
                     }
@@ -222,10 +212,10 @@ export function SystemMap() {
 
   if (error) {
     return (
-      <div className="h-[300px] rounded-lg bg-[#0F172A] border border-[#2D3B4F] flex items-center justify-center">
+      <div className="flex h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
         <div className="text-center">
-          <p className="text-[13px] text-red-400">{error}</p>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-[13px] text-red-500">{error}</p>
+          <p className="mt-1 text-[11px] text-slate-500">
             Check NEXT_PUBLIC_MAPBOX_TOKEN in .env
           </p>
         </div>
@@ -236,35 +226,31 @@ export function SystemMap() {
   return (
     <div className="relative">
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0F172A] rounded-lg">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[22px] bg-slate-50">
           <div className="flex flex-col items-center gap-2">
-            <div className="h-6 w-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-[11px] text-slate-400">Loading map...</span>
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <span className="text-[11px] text-slate-500">Loading map...</span>
           </div>
         </div>
       )}
-      <div
-        ref={mapContainer}
-        className="h-[300px] rounded-lg overflow-hidden"
-      />
-      {/* Legend overlay */}
-      <div className="absolute bottom-3 left-3 bg-[#0F172A]/90 backdrop-blur-sm border border-[#2D3B4F] rounded-lg px-3 py-2">
-        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+      <div ref={mapContainer} className="h-[520px] overflow-hidden rounded-[22px]" />
+      <div className="absolute bottom-4 left-4 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
           Modes
         </p>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {[
-            { label: "Bus", color: "#3B82F6" },
-            { label: "Subway", color: "#DA291C" },
-            { label: "Commuter Rail", color: "#8B5CF6" },
-            { label: "Ferry", color: "#06B6D4" },
+            { label: "Bus", color: "#2563EB" },
+            { label: "Subway", color: "#EF4444" },
+            { label: "Commuter Rail", color: "#7C3AED" },
+            { label: "Ferry", color: "#0EA5A5" },
           ].map((m) => (
-            <div key={m.label} className="flex items-center gap-1.5">
+            <div key={m.label} className="flex items-center gap-2">
               <div
-                className="h-0.5 w-3 rounded-full"
+                className="h-1 w-4 rounded-full"
                 style={{ backgroundColor: m.color }}
               />
-              <span className="text-[10px] text-slate-400">{m.label}</span>
+              <span className="text-[11px] text-slate-600">{m.label}</span>
             </div>
           ))}
         </div>
@@ -274,7 +260,7 @@ export function SystemMap() {
 }
 
 function getDelayColor(minutes: number): string {
-  if (minutes <= 2) return "#22C55E";
+  if (minutes <= 2) return "#16A34A";
   if (minutes <= 5) return "#EAB308";
   if (minutes <= 8) return "#F97316";
   return "#EF4444";

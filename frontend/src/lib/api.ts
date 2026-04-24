@@ -53,6 +53,23 @@ export async function clientFetch<T>(
   return res.json();
 }
 
+export async function clientPost<T>(
+  endpoint: string,
+  body: unknown
+): Promise<T> {
+  const base = typeof window !== "undefined" ? CLIENT_URL : SERVER_URL;
+  const url = buildUrl(base, endpoint);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`API Error: ${res.status} for ${url}`);
+  return res.json();
+}
+
 // ---------- Overview ----------
 export async function getSystemOverview(mode?: string) {
   return apiFetch<any>("/overview/system", { params: mode ? { mode } : undefined });

@@ -53,26 +53,26 @@ const severityConfig: Record<
 > = {
   critical: {
     icon: AlertOctagon,
-    color: "text-red-400",
-    badge: "bg-red-500/20 text-red-400 border-red-500/30",
+    color: "text-red-500",
+    badge: "bg-red-50 text-red-600 border-red-200",
     label: "Critical",
   },
   major: {
     icon: AlertCircle,
-    color: "text-orange-400",
-    badge: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    color: "text-orange-500",
+    badge: "bg-orange-50 text-orange-600 border-orange-200",
     label: "Major",
   },
   minor: {
     icon: AlertTriangle,
-    color: "text-amber-400",
-    badge: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    color: "text-amber-500",
+    badge: "bg-amber-50 text-amber-600 border-amber-200",
     label: "Minor",
   },
   info: {
     icon: Info,
-    color: "text-blue-400",
-    badge: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    color: "text-blue-500",
+    badge: "bg-blue-50 text-blue-600 border-blue-200",
     label: "Info",
   },
 };
@@ -158,55 +158,60 @@ export function AlertsShell() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Alerts</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">Alerts</h1>
+          <p className="mt-2 text-[18px] text-slate-400">
             Active service alerts across the MBTA network
           </p>
         </div>
-        <ModeFilterTabs selected={mode} onChange={setMode} />
+        <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
       {/* Severity KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         <KPICard
+          variant="light"
           title="Critical"
           value={loading ? "..." : summary?.critical ?? 0}
           icon={AlertOctagon}
-          iconColor="text-red-400"
+          iconColor="text-red-500"
           subtitle="Severe disruptions"
           subtitleColor="red"
         />
         <KPICard
+          variant="light"
           title="Major"
           value={loading ? "..." : summary?.major ?? 0}
           icon={AlertCircle}
-          iconColor="text-orange-400"
+          iconColor="text-orange-500"
           subtitle="Significant impact"
           subtitleColor="yellow"
         />
         <KPICard
+          variant="light"
           title="Minor"
           value={loading ? "..." : summary?.minor ?? 0}
           icon={AlertTriangle}
-          iconColor="text-amber-400"
+          iconColor="text-amber-500"
           subtitle="Low impact"
           subtitleColor="default"
         />
         <KPICard
+          variant="light"
           title="Info"
           value={loading ? "..." : summary?.info ?? 0}
           icon={Info}
-          iconColor="text-blue-400"
+          iconColor="text-blue-500"
           subtitle="Informational"
           subtitleColor="default"
         />
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid gap-4 xl:grid-cols-12">
         {/* Alert List */}
-        <div className="col-span-8">
+        <div className="xl:col-span-8">
           <DashboardCard
+            variant="light"
             title={`Active Alerts (${filteredAlerts.length})`}
             action={
               <div className="flex items-center gap-2">
@@ -217,8 +222,8 @@ export function AlertsShell() {
                     className={cn(
                       "text-[11px] px-2 py-1 rounded-md transition-colors",
                       severityFilter === f.key
-                        ? "bg-blue-600/20 text-blue-400"
-                        : "text-slate-500 hover:text-slate-300"
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-slate-500 hover:text-slate-900"
                     )}
                   >
                     {f.label}
@@ -235,7 +240,7 @@ export function AlertsShell() {
                 placeholder="Search alerts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#2D3B4F] rounded-lg pl-9 pr-4 py-2 text-[13px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-4 py-3 text-[14px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
               />
             </div>
 
@@ -244,7 +249,7 @@ export function AlertsShell() {
                 {[...Array(5)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-20 bg-[#0F172A] rounded-lg animate-pulse"
+                    className="h-24 rounded-2xl bg-slate-100 animate-pulse"
                   />
                 ))}
               </div>
@@ -263,7 +268,7 @@ export function AlertsShell() {
                   return (
                     <div
                       key={alert.alert_id}
-                      className="rounded-lg border border-[#2D3B4F] hover:border-[#3D4B5F] transition-colors cursor-pointer"
+                      className="cursor-pointer rounded-2xl border border-slate-200 transition-colors hover:border-slate-300 hover:bg-slate-50/70"
                       onClick={() =>
                         setExpandedAlert(
                           isExpanded ? null : alert.alert_id
@@ -288,11 +293,11 @@ export function AlertsShell() {
                               >
                                 {config.label}
                               </span>
-                              <span className="text-[11px] text-slate-500 uppercase">
+                              <span className="text-[11px] uppercase text-slate-400">
                                 {alert.effect.replace(/_/g, " ")}
                               </span>
                             </div>
-                            <p className="text-[14px] font-medium text-white mt-1.5 leading-snug">
+                            <p className="mt-1.5 text-[14px] font-medium leading-snug text-slate-900">
                               {alert.header}
                             </p>
                             <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-500">
@@ -320,7 +325,7 @@ export function AlertsShell() {
                           </div>
                           <ChevronRight
                             className={cn(
-                              "h-4 w-4 text-slate-600 shrink-0 transition-transform",
+                              "h-4 w-4 shrink-0 text-slate-400 transition-transform",
                               isExpanded && "rotate-90"
                             )}
                           />
@@ -328,11 +333,11 @@ export function AlertsShell() {
                       </div>
 
                       {isExpanded && (
-                        <div className="px-4 pb-4 pt-0 border-t border-[#2D3B4F] mt-0">
+                        <div className="mt-0 border-t border-slate-200 px-4 pb-4 pt-0">
                           <div className="grid grid-cols-2 gap-4 pt-3 text-[12px]">
                             <div>
                               <span className="text-slate-500">Cause</span>
-                              <p className="text-slate-300 mt-0.5">
+                              <p className="mt-0.5 text-slate-700">
                                 {alert.cause.replace(/_/g, " ") || "Unknown"}
                               </p>
                             </div>
@@ -340,7 +345,7 @@ export function AlertsShell() {
                               <span className="text-slate-500">
                                 Service Effect
                               </span>
-                              <p className="text-slate-300 mt-0.5">
+                              <p className="mt-0.5 text-slate-700">
                                 {alert.service_effect || "--"}
                               </p>
                             </div>
@@ -348,7 +353,7 @@ export function AlertsShell() {
                               <span className="text-slate-500">
                                 Active Period
                               </span>
-                              <p className="text-slate-300 mt-0.5">
+                              <p className="mt-0.5 text-slate-700">
                                 {formatDateTime(alert.active_start)}
                                 {alert.active_end &&
                                   ` - ${formatDateTime(alert.active_end)}`}
@@ -358,7 +363,7 @@ export function AlertsShell() {
                               <span className="text-slate-500">
                                 Affected Routes
                               </span>
-                              <p className="text-slate-300 mt-0.5">
+                              <p className="mt-0.5 text-slate-700">
                                 {alert.affected_routes || "System-wide"}
                               </p>
                             </div>
@@ -374,9 +379,9 @@ export function AlertsShell() {
         </div>
 
         {/* Sidebar */}
-        <div className="col-span-4 space-y-4">
+        <div className="space-y-4 xl:col-span-4">
           {/* Alerts by Mode */}
-          <DashboardCard title="Alerts by Mode">
+          <DashboardCard variant="light" title="Alerts by Mode">
             {byMode.length === 0 ? (
               <p className="text-[13px] text-slate-500 text-center py-4">
                 No data
@@ -388,7 +393,7 @@ export function AlertsShell() {
                     key={m.mode}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-[13px] text-slate-300">
+                    <span className="text-[13px] text-slate-700">
                       {m.mode}
                     </span>
                     <div className="flex items-center gap-2">
@@ -398,7 +403,7 @@ export function AlertsShell() {
                           width: `${Math.min(m.alert_count * 8, 80)}px`,
                         }}
                       />
-                      <span className="text-[13px] font-semibold text-white w-6 text-right">
+                      <span className="w-6 text-right text-[13px] font-semibold text-slate-900">
                         {m.alert_count}
                       </span>
                     </div>
@@ -409,7 +414,7 @@ export function AlertsShell() {
           </DashboardCard>
 
           {/* Impact Distribution */}
-          <DashboardCard title="Severity Distribution">
+          <DashboardCard variant="light" title="Severity Distribution">
             {summary && (
               <div className="space-y-3">
                 {[
@@ -424,11 +429,11 @@ export function AlertsShell() {
                     <div key={s.label}>
                       <div className="flex items-center justify-between text-[12px] mb-1">
                         <span className="text-slate-400">{s.label}</span>
-                        <span className="text-white font-medium">
+                        <span className="font-medium text-slate-900">
                           {s.count} ({pct}%)
                         </span>
                       </div>
-                      <div className="h-1.5 bg-[#0F172A] rounded-full">
+                      <div className="h-1.5 rounded-full bg-slate-100">
                         <div
                           className={cn("h-1.5 rounded-full", s.color)}
                           style={{ width: `${pct}%` }}

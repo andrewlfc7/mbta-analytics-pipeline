@@ -12,41 +12,33 @@ interface ModeData {
 }
 
 const modeColors: Record<string, string> = {
-  bus: "#3B82F6",
-  light_rail: "#00843D",
-  heavy_rail: "#F97316",
-  commuter_rail: "#8B5CF6",
-  ferry: "#06B6D4",
+  bus: "#2563EB",
+  light_rail: "#16A34A",
+  heavy_rail: "#EF4444",
+  commuter_rail: "#7C3AED",
+  ferry: "#0EA5A5",
 };
 
 const modeLabels: Record<string, string> = {
   bus: "Bus",
   light_rail: "Light Rail",
-  heavy_rail: "Heavy Rail",
+  heavy_rail: "Subway",
   commuter_rail: "Commuter Rail",
   ferry: "Ferry",
 };
 
 function mapModeData(rows: any[]): { totalTrips: number; modes: ModeData[] } {
-  const totalTrips = rows.reduce(
-    (sum: number, r: any) => sum + (r.trips || 0),
-    0
-  );
+  const totalTrips = rows.reduce((sum: number, r: any) => sum + (r.trips || 0), 0);
 
   return {
     totalTrips,
     modes: rows.map((r: any) => {
-      const modeKey = (r.mode || "")
-        .toLowerCase()
-        .replace(/ /g, "_");
+      const modeKey = (r.mode || "").toLowerCase().replace(/ /g, "_");
       return {
         mode: modeKey,
         label: modeLabels[modeKey] || r.mode || "Unknown",
         trips: r.trips || 0,
-        percentage:
-          totalTrips > 0
-            ? Math.round((r.trips / totalTrips) * 100)
-            : 0,
+        percentage: totalTrips > 0 ? Math.round((r.trips / totalTrips) * 100) : 0,
         color: modeColors[modeKey] || "#64748B",
       };
     }),
@@ -81,10 +73,7 @@ export function TripsByModeDonut({
     async function fetchData() {
       setLoading(true);
       try {
-        const json = await clientFetch<{ data: any[] }>(
-          "/overview/trips-by-mode"
-        );
-
+        const json = await clientFetch<{ data: any[] }>("/overview/trips-by-mode");
         const mapped = mapModeData(json.data || []);
         setTotal(mapped.totalTrips);
         setData(mapped.modes);
@@ -94,19 +83,17 @@ export function TripsByModeDonut({
         setLoading(false);
       }
     }
+
     fetchData();
   }, [deferFetch, initialRows]);
 
   if (loading) {
     return (
       <div className="flex items-center gap-6">
-        <div className="h-36 w-36 rounded-full bg-[#0F172A] animate-pulse shrink-0" />
-        <div className="space-y-3 flex-1">
+        <div className="h-40 w-40 rounded-full bg-slate-100 animate-pulse shrink-0" />
+        <div className="flex-1 space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-4 bg-[#0F172A] rounded animate-pulse"
-            />
+            <div key={i} className="h-4 rounded bg-slate-100 animate-pulse" />
           ))}
         </div>
       </div>
@@ -115,43 +102,45 @@ export function TripsByModeDonut({
 
   if (data.length === 0) {
     return (
-      <p className="text-[13px] text-slate-500 text-center py-8">
+      <p className="py-8 text-center text-[13px] text-slate-500">
         No trip data available
       </p>
     );
   }
 
   return (
-    <div className="flex items-center gap-6">
-      {/* SVG Donut */}
+    <div className="flex items-center gap-8">
       <div className="relative shrink-0">
-        <svg width="140" height="140" viewBox="0 0 140 140">
+        <svg width="220" height="220" viewBox="0 0 220 220">
           {renderDonutSlices(data)}
-          <circle cx="70" cy="70" r="40" fill="#1E293B" />
+          <circle cx="110" cy="110" r="60" fill="white" />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold text-white">
+          <span
+            className={`font-semibold leading-none text-slate-900 ${
+              total.toLocaleString().length > 5 ? "text-[32px]" : "text-[40px]"
+            }`}
+          >
             {total.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-400">Total Trips</span>
+          <span className="mt-2 text-[12px] text-slate-500">Total Trips</span>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="space-y-2.5 flex-1">
+      <div className="flex-1 space-y-4">
         {data.map((d) => (
-          <div key={d.mode} className="flex items-center gap-2">
+          <div key={d.mode} className="flex items-center gap-3">
             <div
-              className="h-3 w-3 rounded-sm shrink-0"
+              className="h-4 w-4 rounded-md shrink-0"
               style={{ backgroundColor: d.color }}
             />
-            <span className="text-[12px] text-slate-300 flex-1 truncate">
+            <span className="flex-1 truncate text-[14px] text-slate-700">
               {d.label}
             </span>
-            <span className="text-[12px] font-semibold text-white">
+            <span className="text-[14px] font-semibold text-slate-900">
               {d.trips.toLocaleString()}
             </span>
-            <span className="text-[11px] text-slate-500 w-10 text-right">
+            <span className="w-12 text-right text-[12px] text-slate-500">
               ({d.percentage}%)
             </span>
           </div>
@@ -162,9 +151,9 @@ export function TripsByModeDonut({
 }
 
 function renderDonutSlices(data: ModeData[]) {
-  const radius = 55;
-  const cx = 70;
-  const cy = 70;
+  const radius = 84;
+  const cx = 110;
+  const cy = 110;
   let cumulative = 0;
   const slices: JSX.Element[] = [];
 
@@ -187,7 +176,7 @@ function renderDonutSlices(data: ModeData[]) {
         key={i}
         d={`M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`}
         fill={d.color}
-        stroke="#1E293B"
+        stroke="#ffffff"
         strokeWidth="2"
       />
     );

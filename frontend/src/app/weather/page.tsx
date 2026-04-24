@@ -6,11 +6,18 @@ export default function WeatherPage() {
     <Suspense
       fallback={
         <div className="space-y-6">
-          <div className="h-8 w-48 bg-[#1E293B] rounded-lg animate-pulse" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="h-12 w-64 rounded-2xl bg-slate-200 animate-pulse" />
+          <div className="grid gap-4 xl:grid-cols-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-[#1E293B] rounded-xl animate-pulse" />
+              <div
+                key={i}
+                className="h-32 rounded-[22px] bg-white animate-pulse shadow-sm"
+              />
             ))}
+          </div>
+          <div className="grid gap-4 xl:grid-cols-12">
+            <div className="h-96 rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-4" />
+            <div className="h-96 rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-8" />
           </div>
         </div>
       }

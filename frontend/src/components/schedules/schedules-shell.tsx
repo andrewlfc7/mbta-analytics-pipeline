@@ -120,24 +120,26 @@ export function SchedulesShell() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Schedules</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">
+            Schedules
+          </h1>
+          <p className="mt-2 text-[18px] text-slate-400">
             View planned service schedules across {routes.length} routes
           </p>
         </div>
-        <ModeFilterTabs selected={mode} onChange={setMode} />
+        <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
       <div className="grid grid-cols-12 gap-4">
         {/* Route list */}
         <div className="col-span-4">
-          <DashboardCard title={`Routes (${filteredRoutes.length})`}>
+          <DashboardCard variant="light" title={`Routes (${filteredRoutes.length})`}>
             {loading ? (
               <div className="space-y-2">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="h-14 bg-[#0F172A] rounded animate-pulse" />
+                  <div key={i} className="h-14 rounded-2xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : (
@@ -147,10 +149,10 @@ export function SchedulesShell() {
                     key={route.route_id}
                     onClick={() => { setSelectedRoute(route.route_id); setDirectionId(0); }}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
+                      "w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors",
                       selectedRoute === route.route_id
-                        ? "bg-blue-600/20 border border-blue-500/30"
-                        : "hover:bg-[#0F172A]/50"
+                        ? "border border-blue-200 bg-blue-50"
+                        : "hover:bg-slate-50"
                     )}
                   >
                     <div
@@ -158,14 +160,14 @@ export function SchedulesShell() {
                       style={{ backgroundColor: route.route_color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-white truncate">
+                      <p className="truncate text-[14px] font-medium text-slate-900">
                         {route.route_name}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[12px] text-slate-500">
                         {route.route_type_desc} · {route.total_trips} trips · {route.unique_stops} stops
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-slate-600 shrink-0" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
                   </button>
                 ))}
               </div>
@@ -176,25 +178,26 @@ export function SchedulesShell() {
         {/* Timetable panel */}
         <div className="col-span-8">
           {!selectedRoute ? (
-            <DashboardCard title="Timetable">
+            <DashboardCard variant="light" title="Timetable">
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Calendar className="h-12 w-12 text-slate-600 mb-4" />
-                <p className="text-[15px] font-medium text-slate-300">
+                <Calendar className="mb-4 h-12 w-12 text-slate-300" />
+                <p className="text-[15px] font-medium text-slate-700">
                   Select a route to view its timetable
                 </p>
-                <p className="text-[13px] text-slate-500 mt-1">
+                <p className="mt-1 text-[13px] text-slate-500">
                   Browse departure times and stop sequences
                 </p>
               </div>
             </DashboardCard>
           ) : (
             <DashboardCard
+              variant="light"
               title={selectedRouteData?.route_name || selectedRoute}
               action={
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setDirectionId(directionId === 0 ? 1 : 0)}
-                    className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md bg-[#0F172A] text-slate-400 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
                   >
                     <ArrowRightLeft className="h-3 w-3" />
                     Direction {directionId === 0 ? "Outbound" : "Inbound"}
@@ -208,7 +211,7 @@ export function SchedulesShell() {
               {timetableLoading ? (
                 <div className="space-y-2">
                   {[...Array(10)].map((_, i) => (
-                    <div key={i} className="h-10 bg-[#0F172A] rounded animate-pulse" />
+                    <div key={i} className="h-10 rounded-2xl bg-slate-100 animate-pulse" />
                   ))}
                 </div>
               ) : Object.keys(tripGroups).length === 0 ? (
@@ -217,40 +220,40 @@ export function SchedulesShell() {
                 </p>
               ) : (
                 <>
-                  <div className="grid grid-cols-[1fr_100px_100px] gap-2 px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+                  <div className="grid grid-cols-[1fr_100px_100px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     <span>Stop</span>
                     <span className="text-right">Arrives</span>
                     <span className="text-right">Departs</span>
                   </div>
                   <div className="max-h-[500px] overflow-y-auto">
                     {Object.entries(tripGroups).slice(0, 20).map(([tripId, stops]) => (
-                      <div key={tripId} className="border-b border-[#2D3B4F]/50">
-                        <div className="px-3 py-1.5 bg-[#0F172A]/30">
-                          <span className="text-[10px] font-semibold text-slate-500">
+                      <div key={tripId} className="border-b border-slate-100">
+                        <div className="bg-slate-50/80 px-3 py-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                             Trip: {tripId.slice(-8)}
                           </span>
-                          <span className="text-[10px] text-slate-600 ml-2">
+                          <span className="ml-2 text-[11px] text-slate-500">
                             {formatTime(stops[0]?.departure_time)} → {formatTime(stops[stops.length - 1]?.departure_time)}
                           </span>
                         </div>
                         {stops.map((stop, i) => (
                           <div
                             key={`${tripId}-${stop.stop_sequence}`}
-                            className="grid grid-cols-[1fr_100px_100px] gap-2 items-center px-3 py-1.5 hover:bg-[#0F172A]/30 transition-colors"
+                            className="grid grid-cols-[1fr_100px_100px] items-center gap-2 px-3 py-2 transition-colors hover:bg-slate-50"
                           >
                             <div className="flex items-center gap-2">
                               <div className="flex flex-col items-center">
                                 <div className={cn(
                                   "h-2 w-2 rounded-full",
-                                  stop.timepoint ? "bg-blue-400" : "bg-slate-600"
+                                  stop.timepoint ? "bg-blue-500" : "bg-slate-300"
                                 )} />
                                 {i < stops.length - 1 && (
-                                  <div className="w-px h-4 bg-[#2D3B4F]" />
+                                  <div className="h-4 w-px bg-slate-200" />
                                 )}
                               </div>
                               <p className={cn(
-                                "text-[12px] truncate",
-                                stop.timepoint ? "text-white font-medium" : "text-slate-400"
+                                  "text-[12px] truncate",
+                                  stop.timepoint ? "font-medium text-slate-900" : "text-slate-500"
                               )}>
                                 {stop.stop_name}
                               </p>
@@ -258,7 +261,7 @@ export function SchedulesShell() {
                             <span className="text-[12px] text-slate-400 text-right">
                               {formatTime(stop.arrival_time)}
                             </span>
-                            <span className="text-[12px] text-white text-right">
+                            <span className="text-[12px] text-slate-900 text-right">
                               {formatTime(stop.departure_time)}
                             </span>
                           </div>

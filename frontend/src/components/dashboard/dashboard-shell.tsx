@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TransitMode, ModeFilterTabs } from "@/components/ui/mode-filter-tabs";
 import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
@@ -12,12 +12,13 @@ import { LazyPerformanceTrendsChart } from "@/components/dashboard/performance-t
 import { LazySystemMap } from "@/components/dashboard/system-map-lazy";
 import { clientFetch } from "@/lib/api";
 import {
-  BarChart3,
-  CheckCircle2,
-  Clock,
   AlertTriangle,
-  Database,
+  BarChart3,
   Calendar,
+  CheckCircle2,
+  ChevronDown,
+  Clock3,
+  Database,
 } from "lucide-react";
 
 interface SystemData {
@@ -80,15 +81,14 @@ export function DashboardShell() {
   }, [fetchData]);
 
   const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
+    month: "long",
     day: "numeric",
   });
 
-  const formatChange = (val: number | undefined, suffix: string = "") => {
+  const formatChange = (val: number | undefined, suffix = "") => {
     if (val === undefined || val === null) return undefined;
     const sign = val > 0 ? "+" : "";
-    return `${sign}${val}${suffix} vs last week`;
+    return `${sign}${val}${suffix} vs yesterday`;
   };
 
   const getDelayChangeColor = (val: number | undefined) => {
@@ -98,86 +98,84 @@ export function DashboardShell() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header Row */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">
             Operations Dashboard
           </h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <p className="mt-2 text-[18px] text-slate-400">
             Monitor system performance across all modes in real time.
           </p>
         </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <ModeFilterTabs selected={mode} onChange={setMode} />
-          <div className="flex items-center gap-2 rounded-lg bg-[#1E293B] border border-[#2D3B4F] px-3 py-1.5 text-[13px] text-slate-300">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" />
-            {today}
+        <div className="flex flex-wrap items-center gap-4">
+          <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-medium text-slate-600 shadow-sm">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            Today, {today}
+            <ChevronDown className="h-4 w-4 text-slate-400" />
           </div>
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid gap-4 xl:grid-cols-5">
         <KPICard
+          variant="light"
           title="Total Trips Today"
-          value={
-            loading
-              ? "..."
-              : data?.total_trips?.toLocaleString() ?? "--"
-          }
+          value={loading ? "..." : data?.total_trips?.toLocaleString() ?? "--"}
           subtitle={formatChange(data?.trips_change_pct, "%")}
-          subtitleColor={
-            (data?.trips_change_pct ?? 0) >= 0 ? "green" : "red"
-          }
+          subtitleColor={(data?.trips_change_pct ?? 0) >= 0 ? "green" : "red"}
           icon={BarChart3}
-          iconColor="text-blue-400"
+          iconColor="text-blue-500"
         />
         <KPICard
+          variant="light"
           title="On-Time Performance"
           value={loading ? "..." : `${data?.on_time_pct ?? "--"}%`}
           subtitle={formatChange(data?.on_time_pct_change, " pp")}
-          subtitleColor={
-            (data?.on_time_pct_change ?? 0) >= 0 ? "green" : "red"
-          }
+          subtitleColor={(data?.on_time_pct_change ?? 0) >= 0 ? "green" : "red"}
           icon={CheckCircle2}
-          iconColor="text-emerald-400"
+          iconColor="text-emerald-500"
         />
         <KPICard
+          variant="light"
           title="Avg Delay (All Modes)"
           value={loading ? "..." : `${data?.avg_delay_minutes ?? "--"} min`}
           subtitle={formatChange(data?.avg_delay_change, " min")}
           subtitleColor={getDelayChangeColor(data?.avg_delay_change)}
-          icon={Clock}
-          iconColor="text-amber-400"
+          icon={Clock3}
+          iconColor="text-amber-500"
         />
         <KPICard
+          variant="light"
           title="Active Alerts"
           value={loading ? "..." : data?.active_alerts ?? "--"}
           subtitle={`${data?.critical_alerts ?? 0} critical · ${data?.minor_alerts ?? 0} minor`}
           subtitleColor="default"
           icon={AlertTriangle}
-          iconColor="text-red-400"
+          iconColor="text-red-500"
         />
         <KPICard
+          variant="light"
           title="Data Freshness"
           value={formatFreshness(data?.last_updated)}
-          subtitle="✓ All systems operational"
+          subtitle="All systems operational"
           subtitleColor="green"
           icon={Database}
-          iconColor="text-emerald-400"
+          iconColor="text-violet-500"
         />
       </div>
 
-      {/* Middle Row — 3 columns */}
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-4">
+      <div className="grid gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-3">
           <DashboardCard
+            variant="light"
             title="Route Performance"
             action={
-              <span className="text-[11px] text-slate-500">
-                By On-Time %
-              </span>
+              <button className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-500">
+                Sort by:
+                <span className="text-slate-700">On-Time Performance</span>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              </button>
             }
           >
             <RoutePerformanceTable
@@ -188,19 +186,20 @@ export function DashboardShell() {
           </DashboardCard>
         </div>
 
-        <div className="col-span-4">
-          <DashboardCard title="System Map">
+        <div className="xl:col-span-6">
+          <DashboardCard variant="light" title="System Map">
             <LazySystemMap />
           </DashboardCard>
         </div>
 
-        <div className="col-span-4">
+        <div className="xl:col-span-3">
           <DashboardCard
+            variant="light"
             title="Active Alerts"
             action={
               <a
                 href="/alerts"
-                className="text-[11px] text-blue-400 hover:text-blue-300"
+                className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
               >
                 View all alerts
               </a>
@@ -214,15 +213,15 @@ export function DashboardShell() {
         </div>
       </div>
 
-      {/* Bottom Row — 3 columns */}
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-5">
+      <div className="grid gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-5">
           <DashboardCard
+            variant="light"
             title="Performance Trends"
             action={
               <a
                 href="/analytics"
-                className="text-[11px] text-blue-400 hover:text-blue-300"
+                className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
               >
                 View full analytics
               </a>
@@ -235,8 +234,16 @@ export function DashboardShell() {
           </DashboardCard>
         </div>
 
-        <div className="col-span-3">
-          <DashboardCard title="Top Delay Hotspots">
+        <div className="xl:col-span-3">
+          <DashboardCard
+            variant="light"
+            title="Top Delay Hotspots"
+            action={
+              <span className="text-[12px] font-medium text-slate-500">
+                Today
+              </span>
+            }
+          >
             <DelayHotspotsTable
               initialRows={snapshot?.delay_hotspots}
               deferFetch={waitingForSnapshot}
@@ -244,13 +251,14 @@ export function DashboardShell() {
           </DashboardCard>
         </div>
 
-        <div className="col-span-4">
+        <div className="xl:col-span-4">
           <DashboardCard
+            variant="light"
             title="Trips by Mode"
             action={
               <a
                 href="/analytics"
-                className="text-[11px] text-blue-400 hover:text-blue-300"
+                className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
               >
                 View trip breakdown
               </a>

@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TransitMode, ModeFilterTabs } from "@/components/ui/mode-filter-tabs";
 import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import {
-  HeartPulse,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-
-
-
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, HeartPulse } from "lucide-react";
 
 interface RouteHealth {
   route_id: string;
@@ -83,40 +75,32 @@ export function ServiceHealthShell() {
     fetchData();
   }, [fetchData]);
 
-  // Group routes by mode
   const modeGroups: ModeGroup[] = (() => {
     const groupMap = new Map<string, RouteHealth[]>();
-    for (const r of routes) {
-      const m = r.route_type_desc || "Unknown";
-      if (!groupMap.has(m)) groupMap.set(m, []);
-      groupMap.get(m)!.push(r);
+    for (const route of routes) {
+      const modeName = route.route_type_desc || "Unknown";
+      if (!groupMap.has(modeName)) groupMap.set(modeName, []);
+      groupMap.get(modeName)!.push(route);
     }
 
     return Array.from(groupMap.entries()).map(([modeName, modeRoutes]) => {
-      const totalTrips = modeRoutes.reduce(
-        (s, r) => s + r.total_predictions,
-        0
-      );
+      const totalTrips = modeRoutes.reduce((sum, route) => sum + route.total_predictions, 0);
       const weightedOT =
         totalTrips > 0
-          ? modeRoutes.reduce(
-              (s, r) => s + r.on_time_pct * r.total_predictions,
-              0
-            ) / totalTrips
+          ? modeRoutes.reduce((sum, route) => sum + route.on_time_pct * route.total_predictions, 0) /
+            totalTrips
           : 0;
       const weightedDelay =
         totalTrips > 0
           ? modeRoutes.reduce(
-              (s, r) => s + r.avg_delay_minutes * r.total_predictions,
+              (sum, route) => sum + route.avg_delay_minutes * route.total_predictions,
               0
             ) / totalTrips
           : 0;
 
       return {
         mode: modeName,
-        routes: modeRoutes.sort(
-          (a, b) => b.reliability_score - a.reliability_score
-        ),
+        routes: modeRoutes.sort((a, b) => b.reliability_score - a.reliability_score),
         avgOnTime: Math.round(weightedOT * 10) / 10,
         avgDelay: Math.round(weightedDelay * 10) / 10,
         totalTrips,
@@ -125,146 +109,126 @@ export function ServiceHealthShell() {
   })();
 
   function getHealthStatus(onTimePct: number) {
-    if (onTimePct >= 85)
-      return { label: "Good", color: "text-emerald-400", bg: "bg-emerald-500" };
-    if (onTimePct >= 70)
-      return { label: "Fair", color: "text-amber-400", bg: "bg-amber-500" };
-    return { label: "Poor", color: "text-red-400", bg: "bg-red-500" };
+    if (onTimePct >= 85) {
+      return {
+        label: "Good",
+        text: "text-emerald-600",
+        badge: "bg-emerald-50 text-emerald-600 border-emerald-200",
+        dot: "bg-emerald-500",
+      };
+    }
+    if (onTimePct >= 70) {
+      return {
+        label: "Fair",
+        text: "text-amber-500",
+        badge: "bg-amber-50 text-amber-600 border-amber-200",
+        dot: "bg-amber-500",
+      };
+    }
+    return {
+      label: "Poor",
+      text: "text-red-500",
+      badge: "bg-red-50 text-red-600 border-red-200",
+      dot: "bg-red-500",
+    };
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Service Health</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">
+            Service Health
+          </h1>
+          <p className="mt-2 text-[18px] text-slate-400">
             System reliability and route health overview
           </p>
         </div>
-        <ModeFilterTabs selected={mode} onChange={setMode} />
+        <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
-      {/* System KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         <KPICard
+          variant="light"
           title="System On-Time"
           value={loading ? "..." : `${system?.on_time_pct ?? "--"}%`}
           icon={CheckCircle2}
-          iconColor="text-emerald-400"
+          iconColor="text-emerald-500"
         />
         <KPICard
+          variant="light"
           title="Avg Delay"
-          value={
-            loading ? "..." : `${system?.avg_delay_minutes ?? "--"} min`
-          }
-          icon={Clock}
-          iconColor="text-amber-400"
+          value={loading ? "..." : `${system?.avg_delay_minutes ?? "--"} min`}
+          icon={Clock3}
+          iconColor="text-amber-500"
         />
         <KPICard
+          variant="light"
           title="Active Alerts"
           value={loading ? "..." : system?.active_alerts ?? "--"}
           icon={AlertTriangle}
-          iconColor="text-red-400"
+          iconColor="text-red-500"
         />
         <KPICard
+          variant="light"
           title="Total Trips"
-          value={
-            loading
-              ? "..."
-              : system?.total_trips?.toLocaleString() ?? "--"
-          }
+          value={loading ? "..." : system?.total_trips?.toLocaleString() ?? "--"}
           icon={HeartPulse}
-          iconColor="text-blue-400"
+          iconColor="text-blue-500"
         />
       </div>
 
-      {/* Mode Groups */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 xl:grid-cols-2">
           {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-64 bg-[#1E293B] rounded-xl animate-pulse"
-            />
+            <div key={i} className="h-[360px] rounded-[24px] bg-white animate-pulse shadow-sm" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 xl:grid-cols-2">
           {modeGroups.map((group) => {
             const health = getHealthStatus(group.avgOnTime);
             return (
               <DashboardCard
                 key={group.mode}
-                title={group.mode}
+                variant="light"
+                title={formatModeLabel(group.mode)}
                 action={
                   <span
                     className={cn(
-                      "text-[11px] font-semibold px-2 py-0.5 rounded-full",
-                      health.color,
-                      health.bg + "/20"
+                      "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                      health.badge
                     )}
                   >
                     {health.label}
                   </span>
                 }
               >
-                {/* Mode summary */}
-                <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-[#2D3B4F]">
-                  <div>
-                    <p className="text-[11px] text-slate-500">On-Time</p>
-                    <p
-                      className={cn(
-                        "text-lg font-bold",
-                        health.color
-                      )}
-                    >
-                      {group.avgOnTime}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-slate-500">Avg Delay</p>
-                    <p className="text-lg font-bold text-white">
-                      {group.avgDelay} min
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-slate-500">Trips</p>
-                    <p className="text-lg font-bold text-white">
-                      {group.totalTrips.toLocaleString()}
-                    </p>
-                  </div>
+                <div className="mb-5 grid grid-cols-3 gap-4 border-b border-slate-200 pb-5">
+                  <Metric label="On-Time" value={`${group.avgOnTime}%`} valueClass={health.text} />
+                  <Metric label="Avg Delay" value={`${group.avgDelay} min`} />
+                  <Metric label="Trips" value={group.totalTrips.toLocaleString()} />
                 </div>
 
-                {/* Routes in this mode */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {group.routes.map((route) => {
-                    const rHealth = getHealthStatus(route.on_time_pct);
+                <div className="space-y-2">
+                  {group.routes.slice(0, 6).map((route) => {
+                    const routeHealth = getHealthStatus(route.on_time_pct);
                     return (
                       <div
                         key={route.route_id}
-                        className="flex items-center gap-3 py-1.5"
+                        className="flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-slate-50"
                       >
-                        <div
-                          className={cn(
-                            "h-2 w-2 rounded-full shrink-0",
-                            rHealth.bg
-                          )}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] text-white truncate">
+                        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", routeHealth.dot)} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-medium text-slate-900">
                             {route.route_name}
                           </p>
+                          <p className="text-[12px] text-slate-500">{route.route_type_desc}</p>
                         </div>
-                        <span
-                          className={cn(
-                            "text-[13px] font-semibold",
-                            rHealth.color
-                          )}
-                        >
+                        <span className={cn("text-[15px] font-semibold", routeHealth.text)}>
                           {route.on_time_pct.toFixed(0)}%
                         </span>
-                        <span className="text-[11px] text-slate-500 w-14 text-right">
+                        <span className="w-16 text-right text-[13px] text-slate-500">
                           {route.avg_delay_minutes.toFixed(1)}m
                         </span>
                       </div>
@@ -278,4 +242,29 @@ export function ServiceHealthShell() {
       )}
     </div>
   );
+}
+
+function Metric({
+  label,
+  value,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className={cn("mt-2 text-[18px] font-semibold text-slate-900", valueClass)}>{value}</p>
+    </div>
+  );
+}
+
+function formatModeLabel(mode: string) {
+  if (mode === "Heavy Rail") return "Subway";
+  if (mode === "Light Rail") return "Green Line";
+  return mode;
 }

@@ -84,15 +84,16 @@ export function AnalyticsShell() {
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">Analytics</h1>
+          <p className="mt-2 text-[18px] text-slate-400">
             Route performance and delay analysis across all modes
           </p>
         </div>
-        <ModeFilterTabs selected={mode} onChange={setMode} />
+        <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
       <DashboardCard
+        variant="light"
         title="All Routes"
         action={
           <div className="flex gap-1">
@@ -109,8 +110,8 @@ export function AnalyticsShell() {
                 className={cn(
                   "text-[11px] px-2 py-1 rounded-md transition-colors",
                   sortBy === s.key
-                    ? "bg-blue-600/20 text-blue-400"
-                    : "text-slate-500 hover:text-slate-300"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-slate-500 hover:text-slate-900"
                 )}
               >
                 {s.label}
@@ -124,14 +125,14 @@ export function AnalyticsShell() {
             {[...Array(10)].map((_, i) => (
               <div
                 key={i}
-                className="h-12 bg-[#0F172A] rounded animate-pulse"
+                className="h-12 rounded-xl bg-slate-100 animate-pulse"
               />
             ))}
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="grid grid-cols-[40px_1fr_120px_100px_100px_100px_80px] gap-3 px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+            <div className="grid grid-cols-[40px_1fr_120px_100px_100px_100px_80px] gap-3 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span>#</span>
               <span>Route</span>
               <span>Mode</span>
@@ -151,19 +152,19 @@ export function AnalyticsShell() {
                 return (
                   <div
                     key={route.route_id}
-                    className="grid grid-cols-[40px_1fr_120px_100px_100px_100px_80px] gap-3 items-center px-3 py-2.5 hover:bg-[#0F172A]/50 transition-colors border-b border-[#2D3B4F]/30"
+                    className="grid grid-cols-[40px_1fr_120px_100px_100px_100px_80px] items-center gap-3 border-b border-slate-100 px-3 py-2.5 transition-colors hover:bg-slate-50"
                   >
-                    <span className="text-[13px] font-bold text-slate-500">
+                    <span className="text-[13px] font-bold text-slate-400">
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-white truncate">
+                      <p className="truncate text-[13px] font-medium text-slate-900">
                         {route.route_name}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Icon className={cn("h-3.5 w-3.5", color)} />
-                      <span className="text-[12px] text-slate-400 capitalize">
+                      <span className="text-[12px] capitalize text-slate-500">
                         {route.route_type_desc}
                       </span>
                     </div>
@@ -171,21 +172,21 @@ export function AnalyticsShell() {
                       className={cn(
                         "text-[13px] font-semibold text-right",
                         route.on_time_pct >= 85
-                          ? "text-emerald-400"
+                          ? "text-emerald-600"
                           : route.on_time_pct >= 70
-                            ? "text-amber-400"
-                            : "text-red-400"
+                            ? "text-amber-500"
+                            : "text-red-500"
                       )}
                     >
                       {route.on_time_pct.toFixed(1)}%
                     </span>
-                    <span className="text-[13px] text-slate-400 text-right">
+                    <span className="text-right text-[13px] text-slate-500">
                       {route.avg_delay_minutes.toFixed(1)} min
                     </span>
-                    <span className="text-[13px] text-slate-400 text-right">
+                    <span className="text-right text-[13px] text-slate-500">
                       {route.total_predictions.toLocaleString()}
                     </span>
-                    <span className="text-[13px] font-semibold text-white text-right">
+                    <span className="text-right text-[13px] font-semibold text-slate-900">
                       {route.reliability_score.toFixed(0)}
                     </span>
                   </div>

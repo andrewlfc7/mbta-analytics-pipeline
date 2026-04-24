@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { DashboardCard } from "@/components/ui/dashboard-card";
+import { KPICard } from "@/components/ui/kpi-card";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Download, TrendingUp, AlertTriangle, Clock, BarChart3 } from "lucide-react";
@@ -108,51 +109,60 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Reports</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">
+            Reports
+          </h1>
+          <p className="mt-2 text-[18px] text-slate-400">
             Performance summary — {routes.length} routes analyzed
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-medium rounded-lg transition-colors">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-700 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
+          >
             <Download className="h-3.5 w-3.5" /> CSV
           </button>
-          <button onClick={exportText} className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[12px] font-medium rounded-lg transition-colors">
+          <button
+            onClick={exportText}
+            className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-[12px] font-semibold text-blue-700 transition-colors hover:border-blue-300 hover:bg-blue-100"
+          >
             <Download className="h-3.5 w-3.5" /> Report
           </button>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         {[
-          { icon: BarChart3, color: "bg-blue-500/20", iconColor: "text-blue-400", label: "Total Trips", value: system?.total_trips?.toLocaleString() || "--" },
-          { icon: TrendingUp, color: "bg-emerald-500/20", iconColor: "text-emerald-400", label: "On-Time", value: system?.on_time_pct ? `${system.on_time_pct}%` : "--" },
-          { icon: Clock, color: "bg-amber-500/20", iconColor: "text-amber-400", label: "Avg Delay", value: system?.avg_delay_minutes != null ? `${system.avg_delay_minutes} min` : "--" },
-          { icon: AlertTriangle, color: "bg-red-500/20", iconColor: "text-red-400", label: "Active Alerts", value: system?.active_alerts ?? "--" },
+          { icon: BarChart3, iconColor: "text-blue-500", label: "Total Trips", value: system?.total_trips?.toLocaleString() || "--", subtitle: "Daily system volume", subtitleColor: "default" as const },
+          { icon: TrendingUp, iconColor: "text-emerald-500", label: "On-Time", value: system?.on_time_pct ? `${system.on_time_pct}%` : "--", subtitle: "System reliability", subtitleColor: "green" as const },
+          { icon: Clock, iconColor: "text-amber-500", label: "Avg Delay", value: system?.avg_delay_minutes != null ? `${system.avg_delay_minutes} min` : "--", subtitle: "Network average", subtitleColor: "default" as const },
+          { icon: AlertTriangle, iconColor: "text-red-500", label: "Active Alerts", value: system?.active_alerts ?? "--", subtitle: `${system?.critical_alerts ?? 0} critical`, subtitleColor: "red" as const },
         ].map((kpi, i) => (
-          <DashboardCard key={i} title="">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg", kpi.color)}><kpi.icon className={cn("h-5 w-5", kpi.iconColor)} /></div>
-              <div>
-                <p className="text-[11px] text-slate-500">{kpi.label}</p>
-                <p className="text-xl font-bold text-white">{kpi.value}</p>
-              </div>
-            </div>
-          </DashboardCard>
+          <KPICard
+            key={i}
+            variant="light"
+            title={kpi.label}
+            value={kpi.value}
+            subtitle={kpi.subtitle}
+            subtitleColor={kpi.subtitleColor}
+            icon={kpi.icon}
+            iconColor={kpi.iconColor}
+          />
         ))}
       </div>
 
-      {/* Trips by Mode */}
       {system?.trips_by_mode && Object.keys(system.trips_by_mode).length > 0 && (
-        <DashboardCard title="Trips by Mode">
-          <div className="grid grid-cols-4 gap-4">
+        <DashboardCard variant="light" title="Trips by Mode">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {Object.entries(system.trips_by_mode).map(([mode, count]) => (
-              <div key={mode} className="text-center py-3">
-                <p className="text-[11px] text-slate-500 capitalize">{mode.replace("_", " ")}</p>
-                <p className="text-2xl font-bold text-white">{(count as number).toLocaleString()}</p>
+              <div key={mode} className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-5 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 capitalize">
+                  {mode.replace("_", " ")}
+                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-950">{(count as number).toLocaleString()}</p>
                 <p className="text-[11px] text-slate-500">
                   {((count as number) / system.total_trips * 100).toFixed(1)}%
                 </p>
@@ -162,20 +172,20 @@ export default function ReportsPage() {
         </DashboardCard>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <DashboardCard title="Highest Delays" action={<span className="text-[11px] text-slate-500">Top 10</span>}>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <DashboardCard variant="light" title="Highest Delays" action={<span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Top 10</span>}>
           {worstRoutes.length === 0 ? (
             <p className="text-[13px] text-slate-500 text-center py-8">No delay data</p>
           ) : (
             <div>
-              <div className="grid grid-cols-[30px_1fr_80px_80px] gap-2 px-2 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+              <div className="grid grid-cols-[30px_1fr_80px_80px] gap-2 border-b border-slate-200 px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 <span>#</span><span>Route</span><span className="text-right">Delay</span><span className="text-right">On-Time</span>
               </div>
               {worstRoutes.map((r, i) => (
-                <div key={r.route_id} className="grid grid-cols-[30px_1fr_80px_80px] gap-2 items-center px-2 py-2 border-b border-[#2D3B4F]/30">
+                <div key={r.route_id} className="grid grid-cols-[30px_1fr_80px_80px] items-center gap-2 border-b border-slate-100 px-2 py-3">
                   <span className="text-[12px] text-slate-500 font-bold">{i + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-[13px] text-white truncate">{r.route_name || r.route_id}</p>
+                    <p className="truncate text-[14px] font-medium text-slate-900">{r.route_name || r.route_id}</p>
                     <p className="text-[10px] text-slate-500">{r.route_type_desc}</p>
                   </div>
                   <span className={cn("text-[13px] font-semibold text-right", (r.avg_delay_minutes || 0) > 2 ? "text-red-400" : "text-amber-400")}>
@@ -188,19 +198,19 @@ export default function ReportsPage() {
           )}
         </DashboardCard>
 
-        <DashboardCard title="Best On-Time" action={<span className="text-[11px] text-slate-500">Top 10</span>}>
+        <DashboardCard variant="light" title="Best On-Time" action={<span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Top 10</span>}>
           {bestRoutes.length === 0 ? (
             <p className="text-[13px] text-slate-500 text-center py-8">No data</p>
           ) : (
             <div>
-              <div className="grid grid-cols-[30px_1fr_80px_80px] gap-2 px-2 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+              <div className="grid grid-cols-[30px_1fr_80px_80px] gap-2 border-b border-slate-200 px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 <span>#</span><span>Route</span><span className="text-right">On-Time</span><span className="text-right">Delay</span>
               </div>
               {bestRoutes.map((r, i) => (
-                <div key={r.route_id} className="grid grid-cols-[30px_1fr_80px_80px] gap-2 items-center px-2 py-2 border-b border-[#2D3B4F]/30">
+                <div key={r.route_id} className="grid grid-cols-[30px_1fr_80px_80px] items-center gap-2 border-b border-slate-100 px-2 py-3">
                   <span className="text-[12px] text-slate-500 font-bold">{i + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-[13px] text-white truncate">{r.route_name || r.route_id}</p>
+                    <p className="truncate text-[14px] font-medium text-slate-900">{r.route_name || r.route_id}</p>
                     <p className="text-[10px] text-slate-500">{r.route_type_desc}</p>
                   </div>
                   <span className="text-[13px] text-emerald-400 font-semibold text-right">{(r.on_time_pct || 0).toFixed(0)}%</span>
@@ -212,15 +222,14 @@ export default function ReportsPage() {
         </DashboardCard>
       </div>
 
-      {/* Weather */}
       {weather.length > 0 && (
-        <DashboardCard title="Weather Impact Summary">
-          <div className="grid grid-cols-[1fr_100px_120px_80px] gap-2 px-2 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+        <DashboardCard variant="light" title="Weather Impact Summary">
+          <div className="grid grid-cols-[1fr_100px_120px_80px] gap-2 border-b border-slate-200 px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             <span>Condition</span><span className="text-right">Avg Delay</span><span className="text-right">Observations</span><span className="text-right">Routes</span>
           </div>
           {weather.map((w) => (
-            <div key={w.condition_category} className="grid grid-cols-[1fr_100px_120px_80px] gap-2 items-center px-2 py-2 border-b border-[#2D3B4F]/30">
-              <span className="text-[13px] text-white font-medium">{w.condition_category}</span>
+            <div key={w.condition_category} className="grid grid-cols-[1fr_100px_120px_80px] items-center gap-2 border-b border-slate-100 px-2 py-3">
+              <span className="text-[14px] font-medium text-slate-900">{w.condition_category}</span>
               <span className={cn("text-[13px] font-semibold text-right", (w.avg_delay_minutes || 0) > 2 ? "text-red-400" : (w.avg_delay_minutes || 0) > 1 ? "text-amber-400" : "text-emerald-400")}>
                 {w.avg_delay_minutes} min
               </span>

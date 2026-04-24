@@ -6,8 +6,8 @@ export default function AnalyticsPage() {
     <Suspense
       fallback={
         <div className="space-y-6">
-          <div className="h-8 w-48 bg-[#1E293B] rounded-lg animate-pulse" />
-          <div className="h-96 bg-[#1E293B] rounded-xl animate-pulse" />
+          <div className="h-12 w-56 rounded-2xl bg-slate-200 animate-pulse" />
+          <div className="h-[640px] rounded-[24px] bg-white animate-pulse shadow-sm" />
         </div>
       }
     >

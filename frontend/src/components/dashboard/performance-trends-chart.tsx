@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-
 } from "recharts";
 
 type MetricTab = "on_time" | "avg_delay" | "trips";
@@ -23,18 +22,18 @@ interface TrendPoint {
 }
 
 const modeLineColors: Record<string, string> = {
-  all: "#3B82F6",
-  light_rail: "#00843D",
-  heavy_rail: "#F97316",
-  commuter_rail: "#8B5CF6",
-  ferry: "#06B6D4",
+  all: "#2563EB",
+  light_rail: "#16A34A",
+  heavy_rail: "#EF4444",
+  commuter_rail: "#7C3AED",
+  ferry: "#0EA5A5",
   bus: "#60A5FA",
 };
 
 const modeLineLabels: Record<string, string> = {
   all: "All Modes",
   light_rail: "Light Rail",
-  heavy_rail: "Heavy Rail",
+  heavy_rail: "Subway",
   commuter_rail: "Commuter Rail",
   ferry: "Ferry",
   bus: "Bus",
@@ -50,17 +49,11 @@ function mapTrendRows(rows: any[]): { points: TrendPoint[]; modes: string[] } {
 
   for (const row of rows) {
     const hour = row.hour_of_day;
-    const modeKey = (row.mode || "")
-      .toLowerCase()
-      .replace(/ /g, "_");
+    const modeKey = (row.mode || "").toLowerCase().replace(/ /g, "_");
     modeSet.add(modeKey);
 
     if (!hourAllMap.has(hour)) {
-      hourAllMap.set(hour, {
-        totalTrips: 0,
-        weightedOT: 0,
-        weightedDelay: 0,
-      });
+      hourAllMap.set(hour, { totalTrips: 0, weightedOT: 0, weightedDelay: 0 });
     }
     const agg = hourAllMap.get(hour)!;
     const trips = row.trips || 0;
@@ -71,9 +64,7 @@ function mapTrendRows(rows: any[]): { points: TrendPoint[]; modes: string[] } {
 
   for (const row of rows) {
     const hour = row.hour_of_day;
-    const modeKey = (row.mode || "")
-      .toLowerCase()
-      .replace(/ /g, "_");
+    const modeKey = (row.mode || "").toLowerCase().replace(/ /g, "_");
 
     if (!hourMap.has(hour)) {
       const allAgg = hourAllMap.get(hour);
@@ -150,6 +141,7 @@ export function PerformanceTrendsChart({
         setLoading(false);
       }
     }
+
     fetchTrends();
   }, [deferFetch, initialRows]);
 
@@ -165,38 +157,36 @@ export function PerformanceTrendsChart({
     trips: "_trips",
   };
 
-  // Lines to render: "all" + each mode
   const lineKeys = ["all", ...modes];
 
   if (loading) {
     return (
       <div>
-        <div className="flex gap-1 mb-4">
+        <div className="mb-4 flex gap-2">
           {tabs.map((tab) => (
             <div
               key={tab.key}
-              className="h-7 w-32 bg-[#0F172A] rounded animate-pulse"
+              className="h-9 w-32 rounded-xl bg-slate-100 animate-pulse"
             />
           ))}
         </div>
-        <div className="h-48 bg-[#0F172A] rounded-lg animate-pulse" />
+        <div className="h-56 rounded-2xl bg-slate-100 animate-pulse" />
       </div>
     );
   }
 
   return (
     <div>
-      {/* Metric Tabs */}
-      <div className="flex gap-1 mb-4">
+      <div className="mb-4 flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setMetric(tab.key)}
             className={cn(
-              "text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors",
+              "rounded-xl border px-3 py-2 text-[12px] font-medium transition-colors",
               metric === tab.key
-                ? "bg-blue-600/20 text-blue-400"
-                : "text-slate-500 hover:text-slate-300"
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700"
             )}
           >
             {tab.label}
@@ -204,86 +194,74 @@ export function PerformanceTrendsChart({
         ))}
       </div>
 
-      {/* Chart */}
       {data.length === 0 ? (
-        <div className="h-48 rounded-lg bg-[#0F172A] border border-[#2D3B4F] flex items-center justify-center">
-          <p className="text-[13px] text-slate-500">
-            No trend data available
-          </p>
+        <div className="flex h-56 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+          <p className="text-[13px] text-slate-500">No trend data available</p>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#1E293B"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 10, fill: "#64748B" }}
-              axisLine={{ stroke: "#1E293B" }}
-              tickLine={false}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: "#64748B" }}
-              axisLine={false}
-              tickLine={false}
-              width={36}
-              unit={metric === "on_time" ? "%" : ""}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1E293B",
-                border: "1px solid #2D3B4F",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              labelStyle={{ color: "#94A3B8" }}
-              itemStyle={{ color: "#F8FAFC" }}
-            />
+        <>
+          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-slate-500">
             {lineKeys.map((modeKey) => (
-              <Line
-                key={modeKey}
-                type="monotone"
-                dataKey={`${modeKey}${metricSuffix[metric]}`}
-                stroke={modeLineColors[modeKey] || "#64748B"}
-                strokeWidth={modeKey === "all" ? 2.5 : 1.5}
-                dot={false}
-                name={modeLineLabels[modeKey] || modeKey}
-                strokeDasharray={modeKey === "all" ? "" : ""}
-                opacity={modeKey === "all" ? 1 : 0.7}
-              />
+              <div key={modeKey} className="flex items-center gap-2">
+                <span
+                  className="h-0.5 w-4 rounded-full"
+                  style={{ backgroundColor: modeLineColors[modeKey] || "#64748B" }}
+                />
+                {modeLineLabels[modeKey] || modeKey}
+              </div>
             ))}
-          </LineChart>
-        </ResponsiveContainer>
-      )}
-
-      {/* Legend */}
-      <div className="flex gap-4 mt-3 justify-center flex-wrap">
-        {lineKeys.map((modeKey) => (
-          <div key={modeKey} className="flex items-center gap-1.5">
-            <div
-              className="h-0.5 w-4 rounded-full"
-              style={{
-                backgroundColor:
-                  modeLineColors[modeKey] || "#64748B",
-              }}
-            />
-            <span className="text-[10px] text-slate-500">
-              {modeLineLabels[modeKey] || modeKey}
-            </span>
           </div>
-        ))}
-      </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "#64748B" }}
+                axisLine={{ stroke: "#E2E8F0" }}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#64748B" }}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+                unit={metric === "on_time" ? "%" : ""}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "14px",
+                  boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)",
+                  fontSize: "12px",
+                }}
+                labelStyle={{ color: "#64748B" }}
+                itemStyle={{ color: "#0F172A" }}
+              />
+              {lineKeys.map((modeKey) => (
+                <Line
+                  key={modeKey}
+                  type="monotone"
+                  dataKey={`${modeKey}${metricSuffix[metric]}`}
+                  stroke={modeLineColors[modeKey] || "#64748B"}
+                  strokeWidth={modeKey === "all" ? 2.75 : 1.8}
+                  dot={false}
+                  name={modeLineLabels[modeKey] || modeKey}
+                  opacity={modeKey === "all" ? 1 : 0.8}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </>
+      )}
     </div>
   );
 }
 
 function formatHour(hour: number): string {
   if (hour === 0) return "12 AM";
-  if (hour === 12) return "12 PM";
   if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return "12 PM";
   return `${hour - 12} PM`;
 }
