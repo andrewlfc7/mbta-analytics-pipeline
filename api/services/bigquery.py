@@ -310,6 +310,7 @@ class BigQueryService:
             ("map_stations.sql", None),
             # Weather
             ("weather_overview.sql", None),
+            ("weather_current.sql", None),
             ("weather_scatter_temp.sql", None),
             ("weather_scatter_wind.sql", None),
             ("weather_route_vulnerability.sql", None),

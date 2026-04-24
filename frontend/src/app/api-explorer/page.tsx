@@ -134,8 +134,10 @@ export default function APIExplorerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">API Explorer</h1>
-        <p className="text-[13px] text-slate-400 mt-0.5">
+        <h1 className="text-5xl font-semibold tracking-tight text-white">
+          API Explorer
+        </h1>
+        <p className="mt-2 text-[18px] text-slate-400">
           Interactive endpoint testing — {ENDPOINTS.length} endpoints available
         </p>
       </div>
@@ -143,18 +145,18 @@ export default function APIExplorerPage() {
       <div className="grid grid-cols-12 gap-4">
         {/* Endpoint list */}
         <div className="col-span-4">
-          <DashboardCard title="Endpoints">
+          <DashboardCard variant="light" title="Endpoints">
             <div className="space-y-1 max-h-[700px] overflow-y-auto">
               {tags.map((tag) => (
                 <div key={tag}>
                   <button
                     onClick={() => toggleTag(tag)}
-                    className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-[#0F172A]/50"
+                    className="flex w-full items-center justify-between rounded-xl px-2 py-2 transition-colors hover:bg-slate-50"
                   >
                     <div className="flex items-center gap-2">
-                      {expandedTags.has(tag) ? <ChevronDown className="h-3 w-3 text-slate-500" /> : <ChevronRight className="h-3 w-3 text-slate-500" />}
-                      <span className={cn("text-[11px] font-semibold px-1.5 py-0.5 rounded", TAG_COLORS[tag] || "bg-slate-500/20 text-slate-400")}>{tag}</span>
-                      <span className="text-[11px] text-slate-600">{ENDPOINTS.filter((e) => e.tag === tag).length}</span>
+                      {expandedTags.has(tag) ? <ChevronDown className="h-3 w-3 text-slate-400" /> : <ChevronRight className="h-3 w-3 text-slate-400" />}
+                      <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-semibold", TAG_COLORS[tag] || "bg-slate-500/20 text-slate-400")}>{tag}</span>
+                      <span className="text-[11px] text-slate-400">{ENDPOINTS.filter((e) => e.tag === tag).length}</span>
                     </div>
                   </button>
                   {expandedTags.has(tag) && (
@@ -164,11 +166,11 @@ export default function APIExplorerPage() {
                           key={ep.path}
                           onClick={() => selectEndpoint(ep)}
                           className={cn(
-                            "w-full text-left px-2 py-1.5 rounded text-[12px] transition-colors",
-                            selected?.path === ep.path ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-[#0F172A]/50"
+                            "w-full rounded-xl px-3 py-2 text-left text-[12px] transition-colors",
+                            selected?.path === ep.path ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                           )}
                         >
-                          <span className="text-emerald-400 font-mono text-[10px] mr-1.5">GET</span>
+                          <span className="mr-1.5 font-mono text-[10px] text-emerald-600">GET</span>
                           {ep.path}
                         </button>
                       ))}
@@ -183,48 +185,48 @@ export default function APIExplorerPage() {
         {/* Request/Response */}
         <div className="col-span-8 space-y-4">
           {!selected ? (
-            <DashboardCard title="Request">
+            <DashboardCard variant="light" title="Request">
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Zap className="h-12 w-12 text-slate-600 mb-4" />
-                <p className="text-[15px] font-medium text-slate-300">Select an endpoint to test</p>
-                <p className="text-[13px] text-slate-500 mt-1">Choose from the sidebar to make a live API request</p>
+                <Zap className="mb-4 h-12 w-12 text-slate-300" />
+                <p className="text-[15px] font-medium text-slate-700">Select an endpoint to test</p>
+                <p className="mt-1 text-[13px] text-slate-500">Choose from the sidebar to make a live API request</p>
               </div>
             </DashboardCard>
           ) : (
             <>
-              <DashboardCard title="Request" action={
+              <DashboardCard variant="light" title="Request" action={
                 <button
                   onClick={executeRequest}
                   disabled={loading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-medium rounded-md transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
                 >
                   <Play className="h-3 w-3" />
                   {loading ? "Sending..." : "Send"}
                 </button>
               }>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-[#0F172A] rounded-lg font-mono text-[13px]">
-                    <span className="text-emerald-400 font-semibold">GET</span>
-                    <span className="text-white">/api/v1{selected.path}</span>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[13px]">
+                    <span className="font-semibold text-emerald-600">GET</span>
+                    <span className="text-slate-900">/api/v1{selected.path}</span>
                   </div>
                   <p className="text-[12px] text-slate-400">{selected.description}</p>
 
                   {selected.params && selected.params.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Parameters</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Parameters</p>
                       {selected.params.map((p) => (
                         <div key={p.name} className="flex items-center gap-3">
                           <div className="w-32">
-                            <span className="text-[12px] text-white font-mono">{p.name}</span>
+                            <span className="font-mono text-[12px] text-slate-900">{p.name}</span>
                             {p.required && <span className="text-red-400 text-[10px] ml-1">*</span>}
-                            <span className="text-[10px] text-slate-600 ml-1">{p.type}</span>
+                            <span className="ml-1 text-[10px] text-slate-400">{p.type}</span>
                           </div>
                           <input
                             type="text"
                             value={paramValues[p.name] || ""}
                             onChange={(e) => setParamValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
                             placeholder={p.default || ""}
-                            className="flex-1 px-2 py-1 bg-[#0F172A] border border-[#2D3B4F] rounded text-[12px] text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
                           />
                         </div>
                       ))}
@@ -234,6 +236,7 @@ export default function APIExplorerPage() {
               </DashboardCard>
 
               <DashboardCard
+                variant="light"
                 title="Response"
                 action={
                   <div className="flex items-center gap-3">
@@ -256,7 +259,7 @@ export default function APIExplorerPage() {
                       </>
                     )}
                     {response && (
-                      <button onClick={copyResponse} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-white">
+                      <button onClick={copyResponse} className="flex items-center gap-1 text-[11px] text-slate-500 transition-colors hover:text-slate-900">
                         <Copy className="h-3 w-3" />
                         {copied ? "Copied!" : "Copy"}
                       </button>
@@ -265,7 +268,7 @@ export default function APIExplorerPage() {
                 }
               >
                 {response ? (
-                  <pre className="text-[11px] font-mono text-slate-300 bg-[#0F172A] rounded-lg p-4 max-h-[400px] overflow-auto whitespace-pre-wrap">
+                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 p-4 font-mono text-[11px] text-slate-700">
                     {response}
                   </pre>
                 ) : (

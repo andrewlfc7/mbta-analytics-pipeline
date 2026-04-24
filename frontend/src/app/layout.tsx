@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { getSystemOverview, getWeatherOverview } from "@/lib/api";
+import { getCurrentWeather, getSystemOverview } from "@/lib/api";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/top-bar";
 
@@ -25,7 +25,7 @@ export default async function RootLayout({
 }) {
   const [systemOverview, weatherOverview] = await Promise.allSettled([
     getSystemOverview(),
-    getWeatherOverview(),
+    getCurrentWeather(),
   ]);
 
   const initialAlertCount =
@@ -39,17 +39,15 @@ export default async function RootLayout({
 
   const weatherPayload =
     weatherOverview.status === "fulfilled"
-      ? weatherOverview.value?.data?.[0] ||
-        weatherOverview.value?.data ||
-        weatherOverview.value ||
-        {}
+      ? weatherOverview.value?.data || weatherOverview.value || {}
       : {};
-  const initialWeatherTemp = weatherPayload?.avg_temp_f
-    ? `${Math.round(weatherPayload.avg_temp_f)}F`
+  const initialWeatherTemp = weatherPayload?.temp_f
+    ? `${Math.round(weatherPayload.temp_f)}°F`
     : "--";
+  const initialWeatherCondition = weatherPayload?.condition || "";
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link
           href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
@@ -61,10 +59,13 @@ export default async function RootLayout({
           initialAlertCount={initialAlertCount}
           initialLastUpdated={initialLastUpdated}
         />
-        <div className="ml-[220px] min-h-screen transition-all duration-300">
-          <TopBar initialTemp={initialWeatherTemp} />
+        <div className="ml-[206px] min-h-screen bg-[#0F172A]">
+          <TopBar
+            initialTemp={initialWeatherTemp}
+            initialCondition={initialWeatherCondition}
+          />
           <main>
-            <div className="mx-auto max-w-[1400px] px-6 py-6">{children}</div>
+            <div className="mx-auto max-w-[1480px] px-6 py-7">{children}</div>
           </main>
         </div>
       </body>

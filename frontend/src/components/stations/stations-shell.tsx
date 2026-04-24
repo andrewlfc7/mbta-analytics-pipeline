@@ -131,16 +131,17 @@ export function StationsShell() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Stations</h1>
-        <p className="text-[13px] text-slate-400 mt-0.5">
+        <h1 className="text-5xl font-semibold tracking-tight text-white">Stations</h1>
+        <p className="mt-2 text-[18px] text-slate-400">
           Station performance, delay hotspots, and route connections
         </p>
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid gap-4 xl:grid-cols-12">
         {/* Station List */}
-        <div className="col-span-7">
+        <div className="xl:col-span-7">
           <DashboardCard
+            variant="light"
             title={`Stations (${filteredStations.length})`}
             action={
               <div className="flex gap-1">
@@ -151,8 +152,8 @@ export function StationsShell() {
                     className={cn(
                       "text-[11px] px-2 py-1 rounded-md transition-colors",
                       sortBy === s.key
-                        ? "bg-blue-600/20 text-blue-400"
-                        : "text-slate-500 hover:text-slate-300"
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-slate-500 hover:text-slate-900"
                     )}
                   >
                     {s.label}
@@ -169,12 +170,12 @@ export function StationsShell() {
                 placeholder="Search stations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#2D3B4F] rounded-lg pl-9 pr-4 py-2 text-[13px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-4 py-3 text-[14px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             {/* Header */}
-            <div className="grid grid-cols-[1fr_80px_80px_80px_60px] gap-2 px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+            <div className="grid grid-cols-[1fr_80px_80px_80px_60px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span>Station</span>
               <span className="text-right">On-Time</span>
               <span className="text-right">Avg Delay</span>
@@ -185,7 +186,7 @@ export function StationsShell() {
             {loading ? (
               <div className="space-y-2 mt-2">
                 {[...Array(10)].map((_, i) => (
-                  <div key={i} className="h-12 bg-[#0F172A] rounded animate-pulse" />
+                  <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : (
@@ -194,15 +195,15 @@ export function StationsShell() {
                   <div
                     key={station.stop_id}
                     className={cn(
-                      "grid grid-cols-[1fr_80px_80px_80px_60px] gap-2 items-center px-3 py-2.5 cursor-pointer transition-colors border-b border-[#2D3B4F]/30",
+                      "grid grid-cols-[1fr_80px_80px_80px_60px] cursor-pointer items-center gap-2 border-b border-slate-100 px-3 py-2.5 transition-colors",
                       selectedStation?.stop_id === station.stop_id
-                        ? "bg-blue-600/10"
-                        : "hover:bg-[#0F172A]/50"
+                        ? "bg-blue-50"
+                        : "hover:bg-slate-50"
                     )}
                     onClick={() => fetchDetail(station.stop_id)}
                   >
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-white truncate">
+                      <p className="truncate text-[13px] font-medium text-slate-900">
                         {station.stop_name}
                       </p>
                       <p className="text-[11px] text-slate-500">
@@ -214,21 +215,21 @@ export function StationsShell() {
                       className={cn(
                         "text-[13px] font-semibold text-right",
                         station.on_time_pct >= 85
-                          ? "text-emerald-400"
+                          ? "text-emerald-600"
                           : station.on_time_pct >= 70
-                            ? "text-amber-400"
-                            : "text-red-400"
+                            ? "text-amber-500"
+                            : "text-red-500"
                       )}
                     >
                       {station.on_time_pct.toFixed(0)}%
                     </span>
-                    <span className="text-[13px] text-slate-400 text-right">
+                    <span className="text-right text-[13px] text-slate-500">
                       {station.avg_delay_minutes.toFixed(1)}m
                     </span>
-                    <span className="text-[13px] text-slate-400 text-right">
+                    <span className="text-right text-[13px] text-slate-500">
                       {station.late_pct.toFixed(0)}%
                     </span>
-                    <span className="text-[12px] font-semibold text-white text-right">
+                    <span className="text-right text-[12px] font-semibold text-slate-900">
                       {station.delay_hotspot_score.toFixed(0)}
                     </span>
                   </div>
@@ -239,13 +240,13 @@ export function StationsShell() {
         </div>
 
         {/* Station Detail Panel */}
-        <div className="col-span-5">
+        <div className="xl:col-span-5">
           {selectedStation ? (
-            <DashboardCard title={selectedStation.stop_name}>
+            <DashboardCard variant="light" title={selectedStation.stop_name}>
               {detailLoading ? (
                 <div className="space-y-3">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-8 bg-[#0F172A] rounded animate-pulse" />
+                    <div key={i} className="h-8 rounded-xl bg-slate-100 animate-pulse" />
                   ))}
                 </div>
               ) : (
@@ -253,14 +254,14 @@ export function StationsShell() {
                   {/* Key Metrics */}
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "On-Time %", value: `${selectedStation.on_time_pct.toFixed(1)}%`, color: selectedStation.on_time_pct >= 85 ? "text-emerald-400" : selectedStation.on_time_pct >= 70 ? "text-amber-400" : "text-red-400" },
-                      { label: "Avg Delay", value: `${selectedStation.avg_delay_minutes.toFixed(1)} min`, color: "text-white" },
-                      { label: "P90 Delay", value: `${selectedStation.p90_delay_minutes.toFixed(1)} min`, color: "text-white" },
-                      { label: "Hotspot Score", value: selectedStation.delay_hotspot_score.toFixed(0), color: "text-white" },
-                      { label: "Total Trips", value: selectedStation.total_predictions.toLocaleString(), color: "text-white" },
-                      { label: "Routes Served", value: String(selectedStation.routes_served), color: "text-white" },
+                      { label: "On-Time %", value: `${selectedStation.on_time_pct.toFixed(1)}%`, color: selectedStation.on_time_pct >= 85 ? "text-emerald-600" : selectedStation.on_time_pct >= 70 ? "text-amber-500" : "text-red-500" },
+                      { label: "Avg Delay", value: `${selectedStation.avg_delay_minutes.toFixed(1)} min`, color: "text-slate-900" },
+                      { label: "P90 Delay", value: `${selectedStation.p90_delay_minutes.toFixed(1)} min`, color: "text-slate-900" },
+                      { label: "Hotspot Score", value: selectedStation.delay_hotspot_score.toFixed(0), color: "text-slate-900" },
+                      { label: "Total Trips", value: selectedStation.total_predictions.toLocaleString(), color: "text-slate-900" },
+                      { label: "Routes Served", value: String(selectedStation.routes_served), color: "text-slate-900" },
                     ].map((m) => (
-                      <div key={m.label} className="bg-[#0F172A] rounded-lg p-3">
+                      <div key={m.label} className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[11px] text-slate-500">{m.label}</p>
                         <p className={cn("text-[16px] font-bold mt-0.5", m.color)}>
                           {m.value}
@@ -279,7 +280,7 @@ export function StationsShell() {
                         {selectedStation.routes.map((r) => (
                           <span
                             key={r.route_id}
-                            className="text-[12px] px-2 py-1 rounded-md bg-[#0F172A] text-slate-300 border border-[#2D3B4F]"
+                            className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-700"
                             style={{
                               borderLeftColor: r.route_color
                                 ? `#${r.route_color}`
@@ -304,10 +305,10 @@ export function StationsShell() {
                         {selectedStation.active_alerts.map((a) => (
                           <div
                             key={a.alert_id}
-                            className="flex items-start gap-2 bg-[#0F172A] rounded-lg p-3"
+                            className="flex items-start gap-2 rounded-2xl bg-slate-50 p-3"
                           >
-                            <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                            <p className="text-[12px] text-slate-300 leading-snug">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                            <p className="text-[12px] leading-snug text-slate-700">
                               {a.header}
                             </p>
                           </div>
@@ -319,10 +320,10 @@ export function StationsShell() {
               )}
             </DashboardCard>
           ) : (
-            <DashboardCard title="Station Details">
+            <DashboardCard variant="light" title="Station Details">
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <MapPin className="h-10 w-10 text-slate-600 mb-3" />
-                <p className="text-[13px] text-slate-400">
+                <MapPin className="mb-3 h-10 w-10 text-slate-300" />
+                <p className="text-[13px] text-slate-500">
                   Click a station to view details
                 </p>
               </div>

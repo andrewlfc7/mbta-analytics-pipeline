@@ -11,15 +11,15 @@ const PerformanceTrendsChart = dynamic(
     ssr: false,
     loading: () => (
       <div>
-        <div className="flex gap-1 mb-4">
+        <div className="mb-4 flex gap-2">
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="h-7 w-32 bg-[#0F172A] rounded animate-pulse"
+              className="h-9 w-32 rounded-xl bg-slate-100 animate-pulse"
             />
           ))}
         </div>
-        <div className="h-48 bg-[#0F172A] rounded-lg animate-pulse" />
+        <div className="h-56 rounded-2xl bg-slate-100 animate-pulse" />
       </div>
     ),
   }

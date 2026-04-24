@@ -1,24 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Cloud, Droplets, Thermometer, Wind } from "lucide-react";
 import {
-  Cloud,
-  Thermometer,
-  Wind,
-  Droplets,
-} from "lucide-react";
-import {
-  ScatterChart,
+  CartesianGrid,
+  ResponsiveContainer,
   Scatter,
+  ScatterChart,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 
 interface CurrentWeather {
@@ -33,16 +28,12 @@ interface WeatherImpact {
   weather_condition: string;
   observation_count: number;
   avg_delay_minutes: number;
-  avg_temp: number;
-  avg_wind: number;
-  avg_precip: number;
 }
 
 interface RouteVuln {
   route_id: string;
   route_name: string;
   route_type_desc: string;
-  weather_sensitivity: number;
   avg_delay_clear: number;
   avg_delay_adverse: number;
 }
@@ -81,24 +72,13 @@ export function WeatherShell() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const [currentRes, impactRes, vulnRes, tempRes, windRes] =
-          await Promise.all([
-            clientFetch<{ data: any }>("/weather/current").catch(() => ({
-              data: null,
-            })),
-            clientFetch<{ data: any[] }>("/weather/delay-impact").catch(
-              () => ({ data: [] })
-            ),
-            clientFetch<{ data: any[] }>(
-              "/weather/route-vulnerability"
-            ).catch(() => ({ data: [] })),
-            clientFetch<{ data: any[] }>(
-              "/weather/scatter/temperature"
-            ).catch(() => ({ data: [] })),
-            clientFetch<{ data: any[] }>("/weather/scatter/wind").catch(
-              () => ({ data: [] })
-            ),
-          ]);
+        const [currentRes, impactRes, vulnRes, tempRes, windRes] = await Promise.all([
+          clientFetch<{ data: any }>("/weather/current").catch(() => ({ data: null })),
+          clientFetch<{ data: any[] }>("/weather/delay-impact").catch(() => ({ data: [] })),
+          clientFetch<{ data: any[] }>("/weather/route-vulnerability").catch(() => ({ data: [] })),
+          clientFetch<{ data: any[] }>("/weather/scatter/temperature").catch(() => ({ data: [] })),
+          clientFetch<{ data: any[] }>("/weather/scatter/wind").catch(() => ({ data: [] })),
+        ]);
 
         if (currentRes.data) {
           setCurrent({
@@ -111,33 +91,27 @@ export function WeatherShell() {
         }
 
         setImpacts(impactRes.data || []);
-
         setVulnRoutes(
-          (vulnRes.data || []).slice(0, 10).map((r: any) => ({
-            route_id: r.route_id || "",
-            route_name: r.route_name || r.route_id || "",
-            route_type_desc: r.route_type_desc || "",
-            weather_sensitivity:
-              r.weather_sensitivity ?? r.delay_increase_pct ?? 0,
-            avg_delay_clear: r.avg_delay_clear ?? r.fair_weather_delay ?? 0,
-            avg_delay_adverse:
-              r.avg_delay_adverse ?? r.adverse_weather_delay ?? 0,
+          (vulnRes.data || []).slice(0, 8).map((row: any) => ({
+            route_id: row.route_id || "",
+            route_name: row.route_name || row.route_id || "",
+            route_type_desc: row.route_type_desc || "",
+            avg_delay_clear: row.avg_delay_clear ?? row.fair_weather_delay ?? 0,
+            avg_delay_adverse: row.avg_delay_adverse ?? row.adverse_weather_delay ?? 0,
           }))
         );
-
         setTempScatter(
-          (tempRes.data || []).slice(0, 200).map((p: any) => ({
-            x: p.temperature_2m ?? p.temp ?? 0,
-            y: (p.avg_delay_seconds ?? p.delay ?? 0) / 60,
-            route_id: p.route_id || "",
+          (tempRes.data || []).slice(0, 220).map((row: any) => ({
+            x: row.temperature_2m ?? row.temp ?? 0,
+            y: (row.avg_delay_seconds ?? row.delay ?? 0) / 60,
+            route_id: row.route_id || "",
           }))
         );
-
         setWindScatter(
-          (windRes.data || []).slice(0, 200).map((p: any) => ({
-            x: p.wind_speed_10m ?? p.wind ?? 0,
-            y: (p.avg_delay_seconds ?? p.delay ?? 0) / 60,
-            route_id: p.route_id || "",
+          (windRes.data || []).slice(0, 220).map((row: any) => ({
+            x: row.wind_speed_10m ?? row.wind ?? 0,
+            y: (row.avg_delay_seconds ?? row.delay ?? 0) / 60,
+            route_id: row.route_id || "",
           }))
         );
       } catch (err) {
@@ -146,84 +120,64 @@ export function WeatherShell() {
         setLoading(false);
       }
     }
+
     fetchAll();
   }, []);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Weather Impact</h1>
-        <p className="text-[13px] text-slate-400 mt-0.5">
-          How weather conditions affect transit performance
+        <h1 className="text-5xl font-semibold tracking-tight text-white">
+          Weather Impact
+        </h1>
+        <p className="mt-2 text-[18px] text-slate-400">
+          Use weather conditions, vulnerability rankings, and scatter plots to understand delay pressure.
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         <KPICard
+          variant="light"
           title="Temperature"
-          value={
-            loading
-              ? "..."
-              : current
-                ? `${Math.round(current.temp_f)}F`
-                : "--"
-          }
+          value={loading ? "..." : current ? `${Math.round(current.temp_f)}°F` : "--"}
           subtitle={current?.condition || ""}
           icon={Thermometer}
-          iconColor="text-orange-400"
+          iconColor="text-orange-500"
         />
         <KPICard
+          variant="light"
           title="Wind Speed"
-          value={
-            loading
-              ? "..."
-              : current
-                ? `${Math.round(current.wind_mph)} mph`
-                : "--"
-          }
+          value={loading ? "..." : current ? `${Math.round(current.wind_mph)} mph` : "--"}
           icon={Wind}
-          iconColor="text-blue-400"
+          iconColor="text-blue-500"
         />
         <KPICard
+          variant="light"
           title="Humidity"
-          value={
-            loading
-              ? "..."
-              : current
-                ? `${Math.round(current.humidity)}%`
-                : "--"
-          }
+          value={loading ? "..." : current ? `${Math.round(current.humidity)}%` : "--"}
           icon={Droplets}
-          iconColor="text-cyan-400"
+          iconColor="text-cyan-500"
         />
         <KPICard
+          variant="light"
           title="Precipitation"
-          value={
-            loading
-              ? "..."
-              : current
-                ? `${current.precip_in.toFixed(2)} in`
-                : "--"
-          }
+          value={loading ? "..." : current ? `${current.precip_in.toFixed(2)} in` : "--"}
           icon={Cloud}
-          iconColor="text-slate-400"
+          iconColor="text-slate-500"
         />
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-5">
-          <DashboardCard title="Weather Condition Impact">
+      <div className="grid gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-4">
+          <DashboardCard variant="light" title="Weather Condition Impact">
             {loading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-12 bg-[#0F172A] rounded animate-pulse"
-                  />
+                  <div key={i} className="h-14 rounded-2xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : impacts.length === 0 ? (
-              <p className="text-[13px] text-slate-500 text-center py-8">
+              <p className="py-8 text-center text-[13px] text-slate-500">
                 No weather impact data available
               </p>
             ) : (
@@ -231,32 +185,30 @@ export function WeatherShell() {
                 {impacts.map((impact) => (
                   <div
                     key={impact.weather_condition}
-                    className="flex items-center justify-between py-2 border-b border-[#2D3B4F]/30"
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
                   >
                     <div>
-                      <p className="text-[13px] font-medium text-white">
+                      <p className="text-[14px] font-medium text-slate-900">
                         {impact.weather_condition}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[12px] text-slate-500">
                         {impact.observation_count} observations
                       </p>
                     </div>
                     <div className="text-right">
                       <p
                         className={cn(
-                          "text-[14px] font-bold",
+                          "text-[16px] font-semibold",
                           impact.avg_delay_minutes > 3
-                            ? "text-red-400"
+                            ? "text-red-500"
                             : impact.avg_delay_minutes > 1.5
-                              ? "text-amber-400"
-                              : "text-emerald-400"
+                              ? "text-amber-500"
+                              : "text-emerald-600"
                         )}
                       >
                         {impact.avg_delay_minutes.toFixed(1)} min
                       </p>
-                      <p className="text-[11px] text-slate-500">
-                        avg delay
-                      </p>
+                      <p className="text-[11px] text-slate-500">avg delay</p>
                     </div>
                   </div>
                 ))}
@@ -265,106 +217,96 @@ export function WeatherShell() {
           </DashboardCard>
         </div>
 
-        <div className="col-span-7">
-          <DashboardCard title="Most Weather-Sensitive Routes">
+        <div className="xl:col-span-8">
+          <DashboardCard variant="light" title="Most Weather-Sensitive Routes">
             {loading ? (
-              <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-10 bg-[#0F172A] rounded animate-pulse"
-                  />
+              <div className="space-y-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-12 rounded-2xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : vulnRoutes.length === 0 ? (
-              <p className="text-[13px] text-slate-500 text-center py-8">
+              <p className="py-8 text-center text-[13px] text-slate-500">
                 No vulnerability data available
               </p>
             ) : (
-              <>
-                <div className="grid grid-cols-[1fr_100px_100px_80px] gap-2 px-2 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-[#2D3B4F]">
+              <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_110px_130px_90px] gap-3 px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                   <span>Route</span>
                   <span className="text-right">Clear Delay</span>
-                  <span className="text-right">Bad Wx Delay</span>
+                  <span className="text-right">Adverse Delay</span>
                   <span className="text-right">Impact</span>
                 </div>
-                <div className="space-y-0">
-                  {vulnRoutes.map((r) => {
-                    const increase =
-                      r.avg_delay_adverse - r.avg_delay_clear;
-                    return (
-                      <div
-                        key={r.route_id}
-                        className="grid grid-cols-[1fr_100px_100px_80px] gap-2 items-center px-2 py-2 hover:bg-[#0F172A]/50 transition-colors border-b border-[#2D3B4F]/30"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-[13px] text-white truncate">
-                            {r.route_name}
-                          </p>
-                          <p className="text-[11px] text-slate-500">
-                            {r.route_type_desc}
-                          </p>
-                        </div>
-                        <span className="text-[13px] text-emerald-400 text-right">
-                          {r.avg_delay_clear.toFixed(1)}m
-                        </span>
-                        <span className="text-[13px] text-red-400 text-right">
-                          {r.avg_delay_adverse.toFixed(1)}m
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[13px] font-semibold text-right",
-                            increase > 2
-                              ? "text-red-400"
-                              : "text-amber-400"
-                          )}
-                        >
-                          +{increase.toFixed(1)}m
-                        </span>
+                {vulnRoutes.map((route) => {
+                  const increase = route.avg_delay_adverse - route.avg_delay_clear;
+                  return (
+                    <div
+                      key={route.route_id}
+                      className="grid grid-cols-[1fr_110px_130px_90px] items-center gap-3 rounded-2xl px-2 py-3 transition-colors hover:bg-slate-50"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-medium text-slate-900">
+                          {route.route_name}
+                        </p>
+                        <p className="text-[12px] text-slate-500">{route.route_type_desc}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              </>
+                      <span className="text-right text-[14px] text-emerald-600">
+                        {route.avg_delay_clear.toFixed(1)}m
+                      </span>
+                      <span className="text-right text-[14px] text-red-500">
+                        {route.avg_delay_adverse.toFixed(1)}m
+                      </span>
+                      <span
+                        className={cn(
+                          "text-right text-[14px] font-semibold",
+                          increase > 2 ? "text-red-500" : "text-amber-500"
+                        )}
+                      >
+                        +{increase.toFixed(1)}m
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </DashboardCard>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <DashboardCard title="Temperature vs Delay">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <DashboardCard variant="light" title="Temperature vs Delay">
           {tempScatter.length === 0 ? (
-            <div className="h-48 flex items-center justify-center">
+            <div className="flex h-[280px] items-center justify-center">
               <p className="text-[13px] text-slate-500">No data</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={280}>
               <ScatterChart>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1E293B"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
                   dataKey="x"
                   type="number"
-                  name="Temp"
+                  name="Temperature"
                   unit="F"
-                  tick={{ fontSize: 10, fill: "#64748B" }}
-                  axisLine={{ stroke: "#1E293B" }}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  axisLine={{ stroke: "#E2E8F0" }}
+                  tickLine={false}
                 />
                 <YAxis
                   dataKey="y"
                   type="number"
                   name="Delay"
                   unit="m"
-                  tick={{ fontSize: 10, fill: "#64748B" }}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
                   axisLine={false}
+                  tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1E293B",
-                    border: "1px solid #2D3B4F",
-                    borderRadius: "8px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "14px",
+                    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)",
                     fontSize: "12px",
                   }}
                   formatter={(value, name) => [
@@ -375,50 +317,45 @@ export function WeatherShell() {
                     String(name),
                   ]}
                 />
-                <Scatter
-                  data={tempScatter}
-                  fill="#3B82F6"
-                  fillOpacity={0.5}
-                  r={3}
-                />
+                <Scatter data={tempScatter} fill="#2563EB" fillOpacity={0.45} r={3.5} />
               </ScatterChart>
             </ResponsiveContainer>
           )}
         </DashboardCard>
 
-        <DashboardCard title="Wind Speed vs Delay">
+        <DashboardCard variant="light" title="Wind Speed vs Delay">
           {windScatter.length === 0 ? (
-            <div className="h-48 flex items-center justify-center">
+            <div className="flex h-[280px] items-center justify-center">
               <p className="text-[13px] text-slate-500">No data</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={280}>
               <ScatterChart>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1E293B"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
                   dataKey="x"
                   type="number"
                   name="Wind"
                   unit="mph"
-                  tick={{ fontSize: 10, fill: "#64748B" }}
-                  axisLine={{ stroke: "#1E293B" }}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  axisLine={{ stroke: "#E2E8F0" }}
+                  tickLine={false}
                 />
                 <YAxis
                   dataKey="y"
                   type="number"
                   name="Delay"
                   unit="m"
-                  tick={{ fontSize: 10, fill: "#64748B" }}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
                   axisLine={false}
+                  tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1E293B",
-                    border: "1px solid #2D3B4F",
-                    borderRadius: "8px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "14px",
+                    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)",
                     fontSize: "12px",
                   }}
                   formatter={(value, name) => [
@@ -429,12 +366,7 @@ export function WeatherShell() {
                     String(name),
                   ]}
                 />
-                <Scatter
-                  data={windScatter}
-                  fill="#06B6D4"
-                  fillOpacity={0.5}
-                  r={3}
-                />
+                <Scatter data={windScatter} fill="#0EA5A5" fillOpacity={0.45} r={3.5} />
               </ScatterChart>
             </ResponsiveContainer>
           )}

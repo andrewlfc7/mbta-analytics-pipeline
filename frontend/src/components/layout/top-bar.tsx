@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Cloud, Clock } from "lucide-react";
+import { Clock3, CloudSun, Menu } from "lucide-react";
 import { clientFetch } from "@/lib/api";
 
 export function TopBar({
   initialTemp = "--",
+  initialCondition = "",
 }: {
   initialTemp?: string;
+  initialCondition?: string;
 }) {
   const [time, setTime] = useState("");
-  const [weather, setWeather] = useState({ temp: initialTemp });
+  const [weather, setWeather] = useState({
+    temp: initialTemp,
+    condition: initialCondition,
+  });
 
   useEffect(() => {
     const updateTime = () => {
@@ -27,17 +32,25 @@ export function TopBar({
 
     async function fetchWeather() {
       try {
-        const data = await clientFetch<any>("/weather/overview");
-        const overview = data?.data?.[0] || data?.data || data || {};
+        const data = await clientFetch<any>("/weather/current");
+        const overview = data?.data || data || {};
         setWeather({
-          temp: overview.avg_temp_f
-            ? `${Math.round(overview.avg_temp_f)}F`
-            : "--",
+          temp: overview.temp_f
+            ? `${Math.round(overview.temp_f)}°F`
+            : overview.temp
+              ? `${Math.round(overview.temp)}°F`
+              : "--",
+          condition: overview.condition || "",
         });
       } catch {
-        setWeather({ temp: "--" });
+        setWeather((current) => ({
+          temp: current.temp || "--",
+          condition: current.condition || "",
+        }));
       }
     }
+
+    void fetchWeather();
     const weatherInterval = setInterval(fetchWeather, 300000);
 
     return () => {
@@ -47,15 +60,21 @@ export function TopBar({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-end border-b border-[#1E293B] bg-[#0F172A]/80 backdrop-blur-md px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between bg-[#111B2E] px-6 shadow-none">
+      <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 text-slate-300 transition-colors hover:border-white/30 hover:text-white">
+        <Menu className="h-5 w-5" />
+      </button>
       <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2 text-slate-400">
-          <Cloud className="h-4 w-4" />
-          <span className="text-[13px]">{weather.temp}</span>
+        <div className="flex items-center gap-2 text-slate-300">
+          <CloudSun className="h-4 w-4 text-amber-500" />
+          <span className="text-[13px] font-medium">
+            {weather.condition ? `${weather.condition} ${weather.temp}` : weather.temp}
+          </span>
         </div>
-        <div className="flex items-center gap-2 text-slate-400">
-          <Clock className="h-4 w-4" />
-          <span className="text-[13px]">{time}</span>
+        <div className="h-5 w-px bg-white/15" />
+        <div className="flex items-center gap-2 text-slate-300">
+          <Clock3 className="h-4 w-4 text-slate-400" />
+          <span className="text-[13px] font-medium">{time}</span>
         </div>
       </div>
     </header>
