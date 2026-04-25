@@ -25,17 +25,19 @@ interface CurrentWeather {
 }
 
 interface WeatherImpact {
-  weather_condition: string;
+  condition_category: string;
   observation_count: number;
   avg_delay_minutes: number;
+  routes_affected: number;
 }
 
 interface RouteVuln {
   route_id: string;
-  route_name: string;
-  route_type_desc: string;
-  avg_delay_clear: number;
-  avg_delay_adverse: number;
+  clear_avg: number;
+  snow_avg: number;
+  precip_avg: number;
+  wind_avg: number;
+  total_trips: number;
 }
 
 interface ScatterPoint {
@@ -92,25 +94,33 @@ export function WeatherShell() {
 
         setImpacts(impactRes.data || []);
         setVulnRoutes(
-          (vulnRes.data || []).slice(0, 8).map((row: any) => ({
-            route_id: row.route_id || "",
-            route_name: row.route_name || row.route_id || "",
-            route_type_desc: row.route_type_desc || "",
-            avg_delay_clear: row.avg_delay_clear ?? row.fair_weather_delay ?? 0,
-            avg_delay_adverse: row.avg_delay_adverse ?? row.adverse_weather_delay ?? 0,
-          }))
+          (vulnRes.data || [])
+            .map((row: any) => ({
+              route_id: row.route_id || "",
+              clear_avg: row.clear_avg ?? 0,
+              snow_avg: row.snow_avg ?? 0,
+              precip_avg: row.precip_avg ?? 0,
+              wind_avg: row.wind_avg ?? 0,
+              total_trips: row.total_trips ?? 0,
+            }))
+            .sort((a: RouteVuln, b: RouteVuln) => {
+              const aAdverse = Math.max(a.snow_avg, a.precip_avg, a.wind_avg);
+              const bAdverse = Math.max(b.snow_avg, b.precip_avg, b.wind_avg);
+              return bAdverse - b.clear_avg - (aAdverse - a.clear_avg);
+            })
+            .slice(0, 8)
         );
         setTempScatter(
           (tempRes.data || []).slice(0, 220).map((row: any) => ({
-            x: row.temperature_2m ?? row.temp ?? 0,
-            y: (row.avg_delay_seconds ?? row.delay ?? 0) / 60,
+            x: row.temperature_f ?? 0,
+            y: row.avg_delay_minutes ?? 0,
             route_id: row.route_id || "",
           }))
         );
         setWindScatter(
           (windRes.data || []).slice(0, 220).map((row: any) => ({
-            x: row.wind_speed_10m ?? row.wind ?? 0,
-            y: (row.avg_delay_seconds ?? row.delay ?? 0) / 60,
+            x: row.wind_speed_mph ?? 0,
+            y: row.avg_delay_minutes ?? 0,
             route_id: row.route_id || "",
           }))
         );
@@ -184,15 +194,15 @@ export function WeatherShell() {
               <div className="space-y-3">
                 {impacts.map((impact) => (
                   <div
-                    key={impact.weather_condition}
+                    key={impact.condition_category}
                     className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
                   >
                     <div>
                       <p className="text-[14px] font-medium text-slate-900">
-                        {impact.weather_condition}
+                        {impact.condition_category}
                       </p>
                       <p className="text-[12px] text-slate-500">
-                        {impact.observation_count} observations
+                        {impact.observation_count} observations · {impact.routes_affected} routes
                       </p>
                     </div>
                     <div className="text-right">
@@ -238,7 +248,12 @@ export function WeatherShell() {
                   <span className="text-right">Impact</span>
                 </div>
                 {vulnRoutes.map((route) => {
-                  const increase = route.avg_delay_adverse - route.avg_delay_clear;
+                  const adverseDelay = Math.max(
+                    route.snow_avg,
+                    route.precip_avg,
+                    route.wind_avg
+                  );
+                  const increase = adverseDelay - route.clear_avg;
                   return (
                     <div
                       key={route.route_id}
@@ -246,23 +261,30 @@ export function WeatherShell() {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-[15px] font-medium text-slate-900">
-                          {route.route_name}
+                          {route.route_id}
                         </p>
-                        <p className="text-[12px] text-slate-500">{route.route_type_desc}</p>
+                        <p className="text-[12px] text-slate-500">
+                          {route.total_trips.toLocaleString()} observations
+                        </p>
                       </div>
                       <span className="text-right text-[14px] text-emerald-600">
-                        {route.avg_delay_clear.toFixed(1)}m
+                        {route.clear_avg.toFixed(1)}m
                       </span>
                       <span className="text-right text-[14px] text-red-500">
-                        {route.avg_delay_adverse.toFixed(1)}m
+                        {adverseDelay.toFixed(1)}m
                       </span>
                       <span
                         className={cn(
                           "text-right text-[14px] font-semibold",
-                          increase > 2 ? "text-red-500" : "text-amber-500"
+                          increase > 2
+                            ? "text-red-500"
+                            : increase > 0.75
+                              ? "text-amber-500"
+                              : "text-emerald-600"
                         )}
                       >
-                        +{increase.toFixed(1)}m
+                        {increase >= 0 ? "+" : ""}
+                        {increase.toFixed(1)}m
                       </span>
                     </div>
                   );
