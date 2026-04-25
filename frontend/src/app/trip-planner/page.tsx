@@ -208,9 +208,13 @@ export default function TripPlannerPage() {
   const [loading, setLoading] = useState(false);
   const [expandedOption, setExpandedOption] = useState<number | null>(0);
   const [preference, setPreference] = useState<"fastest" | "reliable" | "fewest">("reliable");
-  const [departureDate, setDepartureDate] = useState(new Date().toISOString().slice(0, 10));
+  const [departureDate, setDepartureDate] = useState("");
   const [departureTime, setDepartureTime] = useState("09:20");
   const [travelMode, setTravelMode] = useState<"all" | "bus" | "subway" | "commuter_rail" | "ferry">("all");
+
+  useEffect(() => {
+    setDepartureDate(new Date().toISOString().slice(0, 10));
+  }, []);
 
   const findTrips = useCallback(async () => {
     if (!origin || !destination) return;

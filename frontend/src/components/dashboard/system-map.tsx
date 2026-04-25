@@ -5,6 +5,7 @@ import { clientFetch } from "@/lib/api";
 import mapboxgl from "mapbox-gl";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+(mapboxgl as any).setTelemetryEnabled?.(false);
 
 interface SystemMapData {
   routes: GeoJSON.FeatureCollection;

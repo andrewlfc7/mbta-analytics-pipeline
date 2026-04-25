@@ -123,11 +123,9 @@ async def get_temp_scatter(
     route_id: str = Query(None),
 ):
     bq = request.app.state.bq_service
-    params = {}
-    if route_id:
-        params["route_filter"] = route_id
+    params = {"route_filter": route_id or "all"}
     rows = await bq.query_from_file(
-        "weather_scatter_temp.sql", params=params or None
+        "weather_scatter_temp.sql", params=params
     )
     return {"data": rows}
 
@@ -141,11 +139,9 @@ async def get_wind_scatter(
     route_id: str = Query(None),
 ):
     bq = request.app.state.bq_service
-    params = {}
-    if route_id:
-        params["route_filter"] = route_id
+    params = {"route_filter": route_id or "all"}
     rows = await bq.query_from_file(
-        "weather_scatter_wind.sql", params=params or None
+        "weather_scatter_wind.sql", params=params
     )
     return {"data": rows}
 

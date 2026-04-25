@@ -65,9 +65,11 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [alertCount, setAlertCount] = useState(initialAlertCount);
-  const [lastUpdated, setLastUpdated] = useState(
-    formatLastUpdated(initialLastUpdated)
-  );
+  const [lastUpdated, setLastUpdated] = useState("--");
+
+  useEffect(() => {
+    setLastUpdated(formatLastUpdated(initialLastUpdated));
+  }, [initialLastUpdated]);
 
   useEffect(() => {
     async function fetchAlertCount() {
