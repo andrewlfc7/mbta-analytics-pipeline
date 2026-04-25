@@ -1,8 +1,72 @@
-from fastapi import APIRouter, Query, Request
 import logging
+from typing import Any
+
+import httpx
+from fastapi import APIRouter, Query, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+MBTA_CENTER_LAT = 42.3601
+MBTA_CENTER_LON = -71.0589
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+def _map_weather_code(weather_code: int | None) -> str:
+    if weather_code in (0, 1):
+        return "Clear"
+    if weather_code in (2, 3):
+        return "Cloudy"
+    if weather_code in (45, 48):
+        return "Fog"
+    if weather_code in (51, 53, 55, 56, 57):
+        return "Drizzle"
+    if weather_code in (61, 63, 65, 66, 67):
+        return "Rain"
+    if weather_code in (71, 73, 75, 77):
+        return "Snow"
+    if weather_code in (80, 81, 82):
+        return "Rain Showers"
+    if weather_code in (85, 86):
+        return "Snow Showers"
+    if weather_code in (95, 96, 99):
+        return "Thunderstorm"
+    return "Unknown"
+
+
+async def _fetch_live_weather() -> dict[str, Any]:
+    params = {
+        "latitude": MBTA_CENTER_LAT,
+        "longitude": MBTA_CENTER_LON,
+        "current": [
+            "temperature_2m",
+            "relative_humidity_2m",
+            "wind_speed_10m",
+            "precipitation",
+            "weather_code",
+        ],
+        "temperature_unit": "fahrenheit",
+        "wind_speed_unit": "mph",
+        "precipitation_unit": "inch",
+        "timezone": "America/New_York",
+    }
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        response = await client.get(OPEN_METEO_URL, params=params)
+        response.raise_for_status()
+        payload = response.json()
+
+    current = payload.get("current", {})
+    weather_code = current.get("weather_code")
+    return {
+        "temp_f": current.get("temperature_2m"),
+        "humidity": current.get("relative_humidity_2m"),
+        "wind_mph": current.get("wind_speed_10m"),
+        "precip_in": current.get("precipitation"),
+        "weather_code": weather_code,
+        "condition": _map_weather_code(weather_code),
+        "timestamp": current.get("time"),
+        "source": "open-meteo",
+    }
 
 
 @router.get(
@@ -26,10 +90,17 @@ async def get_weather_overview(
     summary="Current weather conditions",
 )
 async def get_current_weather(request: Request):
+    try:
+        return {"data": await _fetch_live_weather()}
+    except Exception as exc:
+        logger.warning("Live weather fetch failed, falling back to warehouse: %s", exc)
+
     bq = request.app.state.bq_service
     rows = await bq.query_from_file("weather_current.sql")
     if rows:
-        return {"data": rows[0]}
+        data = dict(rows[0])
+        data["source"] = "warehouse"
+        return {"data": data}
     return {"data": None}
 
 
@@ -54,7 +125,7 @@ async def get_temp_scatter(
     bq = request.app.state.bq_service
     params = {}
     if route_id:
-        params["route_id"] = route_id
+        params["route_filter"] = route_id
     rows = await bq.query_from_file(
         "weather_scatter_temp.sql", params=params or None
     )
@@ -72,7 +143,7 @@ async def get_wind_scatter(
     bq = request.app.state.bq_service
     params = {}
     if route_id:
-        params["route_id"] = route_id
+        params["route_filter"] = route_id
     rows = await bq.query_from_file(
         "weather_scatter_wind.sql", params=params or None
     )
