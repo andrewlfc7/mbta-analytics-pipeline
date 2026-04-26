@@ -96,4 +96,3 @@ select
         1
     ) as delay_hotspot_score
 from combined
-order by delay_hotspot_score desc

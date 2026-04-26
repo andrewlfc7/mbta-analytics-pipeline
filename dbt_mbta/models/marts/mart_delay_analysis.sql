@@ -90,4 +90,3 @@ aggregated as (
 )
 
 select * from aggregated
-order by route_id, day_of_week, hour_of_day
