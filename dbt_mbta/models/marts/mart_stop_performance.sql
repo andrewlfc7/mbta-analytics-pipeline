@@ -1,6 +1,11 @@
 {{
     config(
-        materialized='table'
+        materialized='table',
+        cluster_by=[
+            "stop_id",
+            "municipality",
+            "routes_served"
+        ]
     )
 }}
 

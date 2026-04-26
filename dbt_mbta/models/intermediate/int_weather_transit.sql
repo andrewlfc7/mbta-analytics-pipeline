@@ -1,6 +1,17 @@
 {{
     config(
-        materialized='table'
+        materialized='table',
+        partition_by={
+            "field": "prediction_hour",
+            "data_type": "timestamp",
+            "granularity": "day"
+        },
+        cluster_by=[
+            "route_id",
+            "stop_id",
+            "weather_condition",
+            "weather_code"
+        ]
     )
 }}
 

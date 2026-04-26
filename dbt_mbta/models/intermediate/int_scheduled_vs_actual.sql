@@ -1,6 +1,16 @@
 {{
     config(
-        materialized='table'
+        materialized='table',
+        partition_by={
+            "field": "service_date",
+            "data_type": "date"
+        },
+        cluster_by=[
+            "route_id",
+            "stop_id",
+            "direction_id",
+            "delay_category"
+        ]
     )
 }}
 
