@@ -81,4 +81,3 @@ select
         1
     ) as reliability_score
 from route_metrics
-order by reliability_score desc

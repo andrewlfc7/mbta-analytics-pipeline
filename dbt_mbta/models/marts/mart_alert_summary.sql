@@ -81,4 +81,3 @@ enriched as (
 )
 
 select * from enriched
-order by impact_score desc
