@@ -14,6 +14,37 @@ export function formatMinutes(minutes: number): string {
   return `${minutes > 0 ? "" : ""}${minutes.toFixed(1)}m`;
 }
 
+export function formatDelayStatus(
+  minutes: number,
+  options: { compact?: boolean } = {}
+): string {
+  const absMinutes = Math.abs(minutes);
+  const value = absMinutes < 0.05 ? "0.0" : absMinutes.toFixed(1);
+
+  if (absMinutes < 0.05) {
+    return options.compact ? `${value} on time` : `${value} min on time`;
+  }
+
+  if (minutes < 0) {
+    return options.compact ? `${value} early` : `${value} min early`;
+  }
+
+  return options.compact ? `${value} delayed` : `${value} min delayed`;
+}
+
+export function formatDelayChange(minutes: number | undefined | null): string | undefined {
+  if (minutes === undefined || minutes === null) return undefined;
+
+  const absMinutes = Math.abs(minutes);
+  if (absMinutes < 0.05) return "On time vs yesterday";
+
+  if (minutes < 0) {
+    return `${absMinutes.toFixed(1)} min earlier vs yesterday`;
+  }
+
+  return `${absMinutes.toFixed(1)} min delayed vs yesterday`;
+}
+
 export function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }

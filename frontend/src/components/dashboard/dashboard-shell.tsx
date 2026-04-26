@@ -11,6 +11,7 @@ import { TripsByModeDonut } from "@/components/dashboard/trips-by-mode-donut";
 import { LazyPerformanceTrendsChart } from "@/components/dashboard/performance-trends-chart-lazy";
 import { LazySystemMap } from "@/components/dashboard/system-map-lazy";
 import { clientFetch } from "@/lib/api";
+import { formatDelayChange, formatDelayStatus } from "@/lib/utils";
 import {
   AlertTriangle,
   BarChart3,
@@ -168,8 +169,14 @@ export function DashboardShell({
         <KPICard
           variant="light"
           title="Avg Delay (All Modes)"
-          value={loading ? "..." : `${data?.avg_delay_minutes ?? "--"} min`}
-          subtitle={formatChange(data?.avg_delay_change, " min")}
+          value={
+            loading
+              ? "..."
+              : data?.avg_delay_minutes !== undefined && data?.avg_delay_minutes !== null
+                ? formatDelayStatus(data.avg_delay_minutes)
+                : "--"
+          }
+          subtitle={formatDelayChange(data?.avg_delay_change)}
           subtitleColor={getDelayChangeColor(data?.avg_delay_change)}
           icon={Clock3}
           iconColor="text-amber-500"

@@ -3,7 +3,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import ORJSONResponse
@@ -23,6 +23,7 @@ from api.routers import (
     weather,
 )
 from api.services.bigquery import BigQueryService
+from api.services.profiler import ApiProfiler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ async def lifespan(app: FastAPI):
     app.state.bq_service = BigQueryService(
         project_id=settings.gcp_project_id,
     )
+    app.state.profiler = ApiProfiler(sample_size=settings.profiler_sample_size)
+    app.state.bq_service.profiler = app.state.profiler
     logger.info(f"BigQuery service initialized: {settings.gcp_project_id}")
 
     try:
@@ -82,15 +85,34 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
-    start = time.time()
+    start = time.perf_counter()
     tracking_token = request.app.state.bq_service.begin_request_tracking()
+    profiler_token = request.app.state.profiler.begin_request()
+    response = None
+    status_code = 500
     try:
         response = await call_next(request)
+        status_code = response.status_code
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", request.url.path)
+        request.app.state.profiler.update_request_identity(request.method, route_path)
+    except HTTPException as exc:
+        status_code = exc.status_code
+        request.app.state.profiler.update_request_identity(request.method, request.url.path)
+        raise
+    except Exception:
+        request.app.state.profiler.update_request_identity(request.method, request.url.path)
+        raise
     finally:
         request_cache_info = request.app.state.bq_service.get_request_cache_info()
         request.app.state.bq_service.end_request_tracking(tracking_token)
+        request_profile = request.app.state.profiler.end_request(
+            profiler_token,
+            status_code=status_code,
+            elapsed_ms=(time.perf_counter() - start) * 1000,
+        )
 
-    elapsed = time.time() - start
+    elapsed = time.perf_counter() - start
     global_cache_info = request.app.state.bq_service.get_cache_info()
     response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
     response.headers["X-Cache-Hit-Rate"] = (
@@ -100,6 +122,10 @@ async def add_timing_header(request: Request, call_next):
     response.headers["X-Cache-Misses"] = str(request_cache_info["misses"])
     response.headers["X-Cache-Coalesced"] = str(request_cache_info["coalesced"])
     response.headers["X-Cache-Stale"] = str(request_cache_info["stale"])
+    response.headers["X-Profile-Query-Count"] = str(request_profile["query_count"])
+    response.headers["X-Profile-Query-Time-Ms"] = str(
+        round(request_profile["query_time_ms"], 1)
+    )
     return response
 
 
@@ -127,3 +153,9 @@ async def health_check():
 @app.get("/health/cache")
 async def cache_health():
     return app.state.bq_service.get_cache_info()
+
+
+@app.get("/health/profile")
+async def profile_health(limit: int = 20):
+    top_n = max(1, min(limit, settings.profiler_top_n * 2))
+    return app.state.profiler.snapshot(limit=top_n)
