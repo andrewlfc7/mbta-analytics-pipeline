@@ -1,12 +1,27 @@
 import { Suspense } from "react";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  DashboardShell,
+  type DashboardSnapshot,
+} from "@/components/dashboard/dashboard-shell";
+import { getDashboardSnapshot } from "@/lib/api";
 
 export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardShell />
+      <DashboardPageContent />
     </Suspense>
   );
+}
+
+async function DashboardPageContent() {
+  const snapshot = await Promise.allSettled([getDashboardSnapshot()]).then(
+    ([result]) =>
+      result.status === "fulfilled"
+        ? (result.value as DashboardSnapshot)
+        : null
+  );
+
+  return <DashboardShell initialSnapshot={snapshot} />;
 }
 
 function DashboardSkeleton() {

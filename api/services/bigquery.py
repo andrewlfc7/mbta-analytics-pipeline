@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import hashlib
 import json
 import logging
@@ -16,6 +17,9 @@ from api.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+request_cache_context: contextvars.ContextVar[dict[str, int] | None] = (
+    contextvars.ContextVar("request_cache_context", default=None)
+)
 
 
 class BigQueryService:
@@ -23,6 +27,7 @@ class BigQueryService:
         self.project_id = project_id
         self._client = None
         self.cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self.payload_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.cache_dir = Path(settings.cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_stats = {
@@ -33,6 +38,33 @@ class BigQueryService:
         }
         self._in_flight: dict[str, asyncio.Future[list[dict]]] = {}
         self._in_flight_lock = asyncio.Lock()
+
+    def begin_request_tracking(self):
+        return request_cache_context.set(
+            {
+                "hits": 0,
+                "misses": 0,
+                "coalesced": 0,
+                "stale": 0,
+            }
+        )
+
+    def get_request_cache_info(self) -> dict[str, int]:
+        return request_cache_context.get() or {
+            "hits": 0,
+            "misses": 0,
+            "coalesced": 0,
+            "stale": 0,
+        }
+
+    def end_request_tracking(self, token):
+        request_cache_context.reset(token)
+
+    def _track_request_cache(self, key: str):
+        current = request_cache_context.get()
+        if current is None:
+            return
+        current[key] = current.get(key, 0) + 1
 
     @property
     def client(self):
@@ -68,6 +100,7 @@ class BigQueryService:
                 self.cache.move_to_end(key)
                 if record_stats:
                     self.cache_stats["hits"] += 1
+                    self._track_request_cache("hits")
                 return entry["data"]
             else:
                 del self.cache[key]
@@ -88,6 +121,7 @@ class BigQueryService:
                     self._prune_cache()
                     if record_stats:
                         self.cache_stats["hits"] += 1
+                        self._track_request_cache("hits")
                     return data
                 except (json.JSONDecodeError, OSError):
                     pass
@@ -115,6 +149,31 @@ class BigQueryService:
     def _prune_cache(self):
         while len(self.cache) > settings.cache_max_entries:
             self.cache.popitem(last=False)
+        while len(self.payload_cache) > settings.cache_max_entries:
+            self.payload_cache.popitem(last=False)
+
+    def get_cached_payload(self, key: str, ttl_seconds: int | None = None) -> Any | None:
+        now = time.time()
+        ttl = ttl_seconds or settings.payload_cache_ttl_seconds
+        entry = self.payload_cache.get(key)
+        if entry is None:
+            return None
+        if now - entry["timestamp"] >= ttl:
+            self.payload_cache.pop(key, None)
+            return None
+        entry["last_access"] = now
+        self.payload_cache.move_to_end(key)
+        return entry["data"]
+
+    def set_cached_payload(self, key: str, data: Any):
+        now = time.time()
+        self.payload_cache[key] = {
+            "data": data,
+            "timestamp": now,
+            "last_access": now,
+        }
+        self.payload_cache.move_to_end(key)
+        self._prune_cache()
 
     def _get_stale_cached(self, key: str) -> list[dict] | None:
         entry = self.cache.get(key)
@@ -149,6 +208,7 @@ class BigQueryService:
         )
         return {
             "entries": len(self.cache),
+            "payload_entries": len(self.payload_cache),
             "hits": self.cache_stats["hits"],
             "misses": self.cache_stats["misses"],
             "hit_rate_pct": hit_rate,
@@ -199,6 +259,7 @@ class BigQueryService:
 
         if not should_execute and future is not None:
             self.cache_stats["coalesced"] += 1
+            self._track_request_cache("coalesced")
             return await future
 
         try:
@@ -210,6 +271,7 @@ class BigQueryService:
 
             if use_cache:
                 self._set_cached(cache_key, rows)
+                self._track_request_cache("misses")
 
             logger.info(
                 f"Query {cache_key[:8]} returned {len(rows)} rows in {elapsed:.2f}s "
@@ -227,6 +289,7 @@ class BigQueryService:
             stale = self._get_stale_cached(cache_key)
             if stale is not None:
                 logger.warning(f"Returning stale cache for {cache_key[:8]}")
+                self._track_request_cache("stale")
                 if future is not None and not future.done():
                     future.set_result(stale)
                 return stale
@@ -239,6 +302,7 @@ class BigQueryService:
             stale = self._get_stale_cached(cache_key)
             if stale is not None:
                 logger.warning(f"Returning stale cache for {cache_key[:8]}")
+                self._track_request_cache("stale")
                 if future is not None and not future.done():
                     future.set_result(stale)
                 return stale
@@ -290,6 +354,11 @@ class BigQueryService:
             ("alerts_by_mode.sql", None),
             # Routes
             ("routes_reliability.sql", None),
+            ("routes_detail.sql", {"route_id": "Red"}),
+            ("routes_detail.sql", {"route_id": "Orange"}),
+            ("routes_detail.sql", {"route_id": "Blue"}),
+            ("routes_detail.sql", {"route_id": "Green-B"}),
+            ("routes_detail.sql", {"route_id": "CR-Providence"}),
             ("routes_hourly.sql", {"route_id": "Red"}),
             ("routes_hourly.sql", {"route_id": "Blue"}),
             ("routes_hourly.sql", {"route_id": "Orange"}),
@@ -305,18 +374,25 @@ class BigQueryService:
             ("temporal_delay_probability.sql", {"route_filter": "all", "period_days": "90"}),
             # Stations
             ("stations_performance_filtered.sql", {"sort_by": "delay_hotspot_score", "limit": "50"}),
+            ("stations_performance_filtered.sql", {"sort_by": "delay_hotspot_score", "limit": "100"}),
             ("delay_hotspots.sql", {"limit": "5"}),
             ("map_route_lines.sql", None),
             ("map_stations.sql", None),
             # Weather
             ("weather_overview.sql", None),
             ("weather_current.sql", None),
-            ("weather_scatter_temp.sql", None),
-            ("weather_scatter_wind.sql", None),
+            ("weather_scatter_temp.sql", {"route_filter": "all"}),
+            ("weather_scatter_wind.sql", {"route_filter": "all"}),
             ("weather_route_vulnerability.sql", None),
             # Quality
             ("quality_overview.sql", None),
             ("quality_alerts.sql", None),
+            # Schedules
+            ("schedules_by_route.sql", None),
+            ("schedules_timetable.sql", {"route_id": "Red", "direction_id": "0"}),
+            ("schedules_timetable.sql", {"route_id": "Orange", "direction_id": "0"}),
+            ("schedules_timetable.sql", {"route_id": "Blue", "direction_id": "0"}),
+            ("schedules_timetable.sql", {"route_id": "Green-B", "direction_id": "0"}),
         ]
 
         success = 0

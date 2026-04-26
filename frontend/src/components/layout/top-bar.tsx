@@ -27,8 +27,6 @@ export function TopBar({
         })
       );
     };
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
 
     async function fetchWeather() {
       try {
@@ -50,14 +48,18 @@ export function TopBar({
       }
     }
 
-    void fetchWeather();
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
+    if (initialTemp === "--" || !initialCondition) {
+      void fetchWeather();
+    }
     const weatherInterval = setInterval(fetchWeather, 300000);
 
     return () => {
       clearInterval(interval);
       clearInterval(weatherInterval);
     };
-  }, []);
+  }, [initialCondition, initialTemp]);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between bg-[#111B2E] px-6 shadow-none">

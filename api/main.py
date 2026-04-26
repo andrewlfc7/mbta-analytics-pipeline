@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import ORJSONResponse
 
 from api.config import get_settings
@@ -26,10 +28,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+try:
+    import uvloop
+
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ImportError:
+    uvloop = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting MBTA Analytics API...")
+    if uvloop is not None:
+        logger.info("uvloop event loop policy enabled")
     app.state.bq_service = BigQueryService(
         project_id=settings.gcp_project_id,
     )
@@ -62,18 +73,33 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=settings.compression_minimum_size,
+    compresslevel=settings.compression_level,
+)
 
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
     start = time.time()
-    response = await call_next(request)
+    tracking_token = request.app.state.bq_service.begin_request_tracking()
+    try:
+        response = await call_next(request)
+    finally:
+        request_cache_info = request.app.state.bq_service.get_request_cache_info()
+        request.app.state.bq_service.end_request_tracking(tracking_token)
+
     elapsed = time.time() - start
+    global_cache_info = request.app.state.bq_service.get_cache_info()
     response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
-    response.headers["X-Cache-Info"] = (
-        str(request.app.state.bq_service.get_cache_info().get("hit_rate_pct", 0))
-        + "% hit rate"
+    response.headers["X-Cache-Hit-Rate"] = (
+        str(global_cache_info.get("hit_rate_pct", 0)) + "%"
     )
+    response.headers["X-Cache-Hits"] = str(request_cache_info["hits"])
+    response.headers["X-Cache-Misses"] = str(request_cache_info["misses"])
+    response.headers["X-Cache-Coalesced"] = str(request_cache_info["coalesced"])
+    response.headers["X-Cache-Stale"] = str(request_cache_info["stale"])
     return response
 
 
@@ -96,3 +122,8 @@ async def health_check():
         "status": "healthy",
         "cache": app.state.bq_service.get_cache_info(),
     }
+
+
+@app.get("/health/cache")
+async def cache_health():
+    return app.state.bq_service.get_cache_info()
