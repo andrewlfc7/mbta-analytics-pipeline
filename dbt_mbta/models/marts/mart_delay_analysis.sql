@@ -5,8 +5,7 @@
             "route_id",
             "route_type_desc",
             "day_type",
-            "hour_of_day",
-            "direction_id"
+            "hour_of_day"
         ]
     )
 }}
