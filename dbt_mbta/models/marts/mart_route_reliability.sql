@@ -1,6 +1,11 @@
 {{
     config(
-        materialized='table'
+        materialized='table',
+        cluster_by=[
+            "route_id",
+            "route_type_desc",
+            "route_type"
+        ]
     )
 }}
 

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     cache_max_entries: int = 256
     cache_dir: str = "/tmp/mbta_api_cache"
     payload_cache_ttl_seconds: int = 900
+    live_weather_cache_ttl_seconds: int = 180
     compression_minimum_size: int = 1024
     compression_level: int = 6
     profiler_sample_size: int = 300

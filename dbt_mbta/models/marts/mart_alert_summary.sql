@@ -1,6 +1,16 @@
 {{
     config(
-        materialized='table'
+        materialized='table',
+        partition_by={
+            "field": "active_start",
+            "data_type": "timestamp",
+            "granularity": "day"
+        },
+        cluster_by=[
+            "is_active",
+            "severity_category",
+            "effect"
+        ]
     )
 }}
 

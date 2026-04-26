@@ -4,8 +4,11 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, Query, Request
 
+from api.config import get_settings
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
+settings = get_settings()
 
 MBTA_CENTER_LAT = 42.3601
 MBTA_CENTER_LON = -71.0589
@@ -90,12 +93,22 @@ async def get_weather_overview(
     summary="Current weather conditions",
 )
 async def get_current_weather(request: Request):
+    bq = request.app.state.bq_service
+    payload_cache_key = "weather_current_live_v1"
+    cached_payload = bq.get_cached_payload(
+        payload_cache_key,
+        ttl_seconds=settings.live_weather_cache_ttl_seconds,
+    )
+    if cached_payload is not None:
+        return {"data": cached_payload}
+
     try:
-        return {"data": await _fetch_live_weather()}
+        payload = await _fetch_live_weather()
+        bq.set_cached_payload(payload_cache_key, payload)
+        return {"data": payload}
     except Exception as exc:
         logger.warning("Live weather fetch failed, falling back to warehouse: %s", exc)
 
-    bq = request.app.state.bq_service
     rows = await bq.query_from_file("weather_current.sql")
     if rows:
         data = dict(rows[0])
