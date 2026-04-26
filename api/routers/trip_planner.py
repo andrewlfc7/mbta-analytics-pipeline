@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query, Request
+import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,43 +39,48 @@ async def find_routes(
         + [r.get("second_route_id") for r in routes if r.get("second_route_id")]
     ))
 
-    reliability = {}
-    if route_ids:
-        try:
-            rel_rows = await bq.query(
-                f"""
-                SELECT
-                  route_id,
-                  ROUND(SAFE_DIVIDE(COUNTIF(delay_seconds <= 120), COUNT(*)) * 100, 1) AS on_time_pct,
-                  ROUND(AVG(delay_seconds) / 60.0, 1) AS avg_delay_minutes,
-                  ROUND(SAFE_DIVIDE(COUNTIF(delay_seconds > 300), COUNT(*)) * 100, 1) AS delay_risk_pct
-                FROM `{bq.project_id}.intermediate.int_scheduled_vs_actual`
-                WHERE route_id IN UNNEST({route_ids})
-                GROUP BY route_id
-                """,
-                use_cache=True,
-            )
-            for r in rel_rows:
-                reliability[r["route_id"]] = r
-        except Exception as e:
-            logger.warning(f"Reliability fetch failed: {e}")
+    reliability: dict = {}
 
-    # Get current weather
+    async def fetch_reliability():
+        if not route_ids:
+            return []
+        return await bq.query(
+            f"""
+            SELECT
+              route_id,
+              ROUND(SAFE_DIVIDE(COUNTIF(delay_seconds <= 120), COUNT(*)) * 100, 1) AS on_time_pct,
+              ROUND(AVG(delay_seconds) / 60.0, 1) AS avg_delay_minutes,
+              ROUND(SAFE_DIVIDE(COUNTIF(delay_seconds > 300), COUNT(*)) * 100, 1) AS delay_risk_pct
+            FROM `{bq.project_id}.intermediate.int_scheduled_vs_actual`
+            WHERE route_id IN UNNEST({route_ids})
+            GROUP BY route_id
+            """,
+            use_cache=True,
+        )
+
+    rel_result, weather_result, alerts_result = await asyncio.gather(
+        fetch_reliability(),
+        bq.query_from_file("weather_current.sql"),
+        bq.query_from_file(
+            "alerts_active.sql",
+            params={"severity": "", "limit": "100"},
+        ),
+        return_exceptions=True,
+    )
+
+    if not isinstance(rel_result, Exception):
+        for r in rel_result:
+            reliability[r["route_id"]] = r
+    else:
+        logger.warning(f"Reliability fetch failed: {rel_result}")
+
     weather = None
-    try:
-        w_rows = await bq.query_from_file("weather_current.sql")
-        if w_rows:
-            weather = w_rows[0]
-    except Exception:
-        pass
+    if not isinstance(weather_result, Exception) and weather_result:
+        weather = weather_result[0]
 
-    # Get active alerts for relevant routes
     alerts = []
-    try:
-        alert_rows = await bq.query_from_file("alerts_active.sql", params={"severity": "", "limit": "100"})
-        alerts = alert_rows or []
-    except Exception:
-        pass
+    if not isinstance(alerts_result, Exception):
+        alerts = alerts_result or []
 
     # Build trip options
     options = []

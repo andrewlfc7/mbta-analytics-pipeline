@@ -11,6 +11,8 @@ router = APIRouter()
 @router.get(
     "/heatmap",
     response_model=HeatmapResponse,
+    response_model_exclude_unset=True,
+    response_model_exclude_none=True,
     summary="Delay heatmap by day of week and hour",
 )
 async def get_delay_heatmap(
@@ -83,6 +85,8 @@ async def get_delay_heatmap(
 @router.get(
     "/heatmap/cell-detail",
     response_model=CellDetailResponse,
+    response_model_exclude_unset=True,
+    response_model_exclude_none=True,
     summary="Detailed breakdown for a specific heatmap cell",
 )
 async def get_cell_detail(

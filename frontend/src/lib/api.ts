@@ -74,6 +74,9 @@ export async function clientPost<T>(
 export async function getSystemOverview(mode?: string) {
   return apiFetch<any>("/overview/system", { params: mode ? { mode } : undefined });
 }
+export async function getDashboardSnapshot() {
+  return apiFetch<any>("/overview/dashboard-snapshot", { revalidate: 60 });
+}
 export async function getRouteRanking(params?: { mode?: string; limit?: number }) {
   return apiFetch<any>("/overview/route-ranking", { params: params as any });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import { TransitMode, ModeFilterTabs } from "@/components/ui/mode-filter-tabs";
 import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
@@ -39,7 +39,7 @@ interface SystemData {
   last_updated: string;
 }
 
-interface DashboardSnapshot {
+export interface DashboardSnapshot {
   system: SystemData;
   route_ranking: any[];
   alerts: any[];
@@ -48,11 +48,23 @@ interface DashboardSnapshot {
   trips_by_mode: any[];
 }
 
-export function DashboardShell() {
+export function DashboardShell({
+  initialSnapshot,
+}: {
+  initialSnapshot?: DashboardSnapshot | null;
+}) {
   const [mode, setMode] = useState<TransitMode>("all");
-  const [data, setData] = useState<SystemData | null>(null);
-  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<SystemData | null>(
+    initialSnapshot?.system ?? null
+  );
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(
+    initialSnapshot ?? null
+  );
+  const [loading, setLoading] = useState(!initialSnapshot);
+  const [todayLabel, setTodayLabel] = useState("Today");
+  const [usedInitialSnapshot, setUsedInitialSnapshot] = useState(
+    Boolean(initialSnapshot)
+  );
   const waitingForSnapshot = mode === "all" && loading && !snapshot;
 
   const fetchData = useCallback(async () => {
@@ -77,13 +89,22 @@ export function DashboardShell() {
   }, [mode]);
 
   useEffect(() => {
+    if (mode === "all" && usedInitialSnapshot) {
+      setUsedInitialSnapshot(false);
+      return;
+    }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, mode, usedInitialSnapshot]);
 
-  const today = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-  });
+  useEffect(() => {
+    setTodayLabel(
+      new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        timeZone: "America/New_York",
+      })
+    );
+  }, []);
 
   const formatChange = (val: number | undefined, suffix = "") => {
     if (val === undefined || val === null) return undefined;
@@ -108,10 +129,18 @@ export function DashboardShell() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
+          <ModeFilterTabs
+            selected={mode}
+            onChange={(nextMode) => {
+              startTransition(() => {
+                setMode(nextMode);
+              });
+            }}
+            variant="light"
+          />
           <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-medium text-slate-600 shadow-sm">
             <Calendar className="h-4 w-4 text-slate-400" />
-            Today, {today}
+            {todayLabel === "Today" ? "Today" : `Today, ${todayLabel}`}
             <ChevronDown className="h-4 w-4 text-slate-400" />
           </div>
         </div>
@@ -157,7 +186,7 @@ export function DashboardShell() {
         <KPICard
           variant="light"
           title="Data Freshness"
-          value={formatFreshness(data?.last_updated)}
+          value={loading ? "--" : formatFreshness(data?.last_updated)}
           subtitle="All systems operational"
           subtitleColor="green"
           icon={Database}

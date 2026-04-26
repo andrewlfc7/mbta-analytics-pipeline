@@ -27,7 +27,7 @@ User=$USER
 WorkingDirectory=$(pwd)
 Environment="PATH=$(pwd)/venv/bin:/usr/local/bin:/usr/bin"
 EnvironmentFile=$(pwd)/.env
-ExecStart=$(pwd)/venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+ExecStart=$(pwd)/venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2 --loop uvloop --http httptools
 Restart=always
 RestartSec=5
 

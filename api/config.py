@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 2700
     cache_max_entries: int = 256
     cache_dir: str = "/tmp/mbta_api_cache"
+    payload_cache_ttl_seconds: int = 900
+    compression_minimum_size: int = 1024
+    compression_level: int = 6
 
     # ML Model
     model_path: str = "ml/models/delay_predictor.joblib"

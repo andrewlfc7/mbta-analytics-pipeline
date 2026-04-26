@@ -21,14 +21,19 @@ async def get_system_overview(
 ):
     bq = request.app.state.bq_service
 
-    current = await bq.query_from_file("overview_system_enhanced.sql")
-
-    try:
-        previous = await bq.query_from_file("overview_system_prev_week.sql")
-    except Exception:
-        previous = None
-
-    trips_by_mode_rows = await bq.query_from_file("overview_trips_by_mode.sql")
+    current, trips_by_mode_rows = await asyncio.gather(
+        bq.query_from_file("overview_system_enhanced.sql"),
+        bq.query_from_file("overview_trips_by_mode.sql"),
+    )
+    previous_result = await asyncio.gather(
+        bq.query_from_file("overview_system_prev_week.sql", use_cache=True),
+        return_exceptions=True,
+    )
+    previous = (
+        previous_result[0]
+        if previous_result and not isinstance(previous_result[0], Exception)
+        else None
+    )
     trips_by_mode = {}
     for row in trips_by_mode_rows:
         mode_key = _format_mode_key(row.get("mode"))

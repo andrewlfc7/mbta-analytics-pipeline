@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query, Request
+import asyncio
 from collections import defaultdict
 import logging
 
@@ -55,17 +56,22 @@ async def get_station_map(request: Request):
 )
 async def get_system_map_data(request: Request):
     bq = request.app.state.bq_service
+    payload_cache_key = "stations_map_system_geojson_v2"
+    cached_payload = bq.get_cached_payload(payload_cache_key)
+    if cached_payload is not None:
+        return cached_payload
 
-    route_lines = await bq.query_from_file("map_route_lines.sql")
-    stations = await bq.query_from_file("map_stations.sql")
+    route_lines, stations = await asyncio.gather(
+        bq.query_from_file("map_route_lines.sql"),
+        bq.query_from_file("map_stations.sql"),
+    )
 
-    routes_geojson = _build_route_geojson(route_lines)
-    stations_geojson = _build_station_geojson(stations)
-
-    return {
-        "routes": routes_geojson,
-        "stations": stations_geojson,
+    payload = {
+        "routes": _build_route_geojson(route_lines),
+        "stations": _build_station_geojson(stations),
     }
+    bq.set_cached_payload(payload_cache_key, payload)
+    return payload
 
 
 @router.get(
@@ -113,7 +119,9 @@ def _build_route_geojson(route_lines: list[dict]) -> dict:
         if lat is None or lng is None:
             continue
 
-        routes[rid]["coords"].append([float(lng), float(lat)])
+        routes[rid]["coords"].append(
+            [round(float(lng), 5), round(float(lat), 5)]
+        )
         if not routes[rid]["meta"]:
             color = row.get("route_color", "7F7F7F")
             if not color.startswith("#"):
@@ -153,16 +161,14 @@ def _build_station_geojson(stations: list[dict]) -> dict:
             "properties": {
                 "stop_id": row.get("stop_id", ""),
                 "stop_name": row.get("stop_name", ""),
-                "municipality": row.get("municipality", ""),
                 "avg_delay_minutes": row.get("avg_delay_minutes", 0),
                 "delay_hotspot_score": row.get("delay_hotspot_score", 0),
                 "routes_served": row.get("routes_served", 0),
                 "alert_count": row.get("active_alert_count", 0),
-                "late_pct": row.get("late_pct", 0),
             },
             "geometry": {
                 "type": "Point",
-                "coordinates": [float(lng), float(lat)],
+                "coordinates": [round(float(lng), 5), round(float(lat), 5)],
             },
         })
 

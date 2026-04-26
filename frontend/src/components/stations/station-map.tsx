@@ -37,6 +37,7 @@ export function StationMap({ data, onSelectStation, selectedStation }: Props) {
         const mapboxgl = (await import("mapbox-gl")).default;
 
         (mapboxgl as any).accessToken = stableToken.current!;
+        (mapboxgl as any).setTelemetryEnabled?.(false);
 
         map = new mapboxgl.Map({
           container: mapContainer.current!,
