@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { TransitMode } from "@/components/ui/mode-filter-tabs";
 import { clientFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, formatDelayStatus } from "@/lib/utils";
 import { Bus, Train, TrainFront, Ship } from "lucide-react";
 
 interface RouteRow {
@@ -108,7 +108,7 @@ export function RoutePerformanceTable({
 
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-[32px_1fr_44px_82px_88px] gap-3 px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      <div className="grid grid-cols-[32px_1fr_44px_82px_108px] gap-3 px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         <span>Rank</span>
         <span>Route / Line</span>
         <span>Mode</span>
@@ -123,7 +123,7 @@ export function RoutePerformanceTable({
         return (
           <div
             key={route.route_id}
-            className="grid grid-cols-[32px_1fr_44px_82px_88px] items-center gap-3 rounded-2xl px-2 py-3 transition-colors hover:bg-slate-50"
+            className="grid grid-cols-[32px_1fr_44px_82px_108px] items-center gap-3 rounded-2xl px-2 py-3 transition-colors hover:bg-slate-50"
           >
             <span className="text-[24px] font-light text-slate-500">
               {route.rank}
@@ -154,10 +154,14 @@ export function RoutePerformanceTable({
             <span
               className={cn(
                 "text-right text-[15px] font-medium",
-                route.avg_delay_minutes > 5 ? "text-orange-500" : "text-slate-700"
+                route.avg_delay_minutes < 0
+                  ? "text-emerald-600"
+                  : route.avg_delay_minutes > 5
+                    ? "text-orange-500"
+                    : "text-slate-700"
               )}
             >
-              {route.avg_delay_minutes.toFixed(1)} min
+              {formatDelayStatus(route.avg_delay_minutes, { compact: true })}
             </span>
           </div>
         );

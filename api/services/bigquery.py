@@ -25,6 +25,7 @@ request_cache_context: contextvars.ContextVar[dict[str, int] | None] = (
 class BigQueryService:
     def __init__(self, project_id: str):
         self.project_id = project_id
+        self.profiler = None
         self._client = None
         self.cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.payload_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
@@ -233,12 +234,21 @@ class BigQueryService:
         query: str,
         params: dict | None = None,
         use_cache: bool = True,
+        label: str | None = None,
     ) -> list[dict]:
         cache_key = self._cache_key(query, params)
+        query_label = label or cache_key[:8]
 
         if use_cache:
             cached = self._get_cached(cache_key)
             if cached is not None:
+                if self.profiler is not None:
+                    self.profiler.record_query(
+                        query_label,
+                        elapsed_ms=0.0,
+                        row_count=len(cached),
+                        cache_status="hit",
+                    )
                 return cached
 
         future: asyncio.Future[list[dict]] | None = None
@@ -260,7 +270,16 @@ class BigQueryService:
         if not should_execute and future is not None:
             self.cache_stats["coalesced"] += 1
             self._track_request_cache("coalesced")
-            return await future
+            wait_started = time.perf_counter()
+            rows = await future
+            if self.profiler is not None:
+                self.profiler.record_query(
+                    query_label,
+                    elapsed_ms=(time.perf_counter() - wait_started) * 1000,
+                    row_count=len(rows),
+                    cache_status="coalesced",
+                )
+            return rows
 
         try:
             logger.info(f"Executing BigQuery query: {cache_key[:8]}...")
@@ -277,6 +296,14 @@ class BigQueryService:
                 f"Query {cache_key[:8]} returned {len(rows)} rows in {elapsed:.2f}s "
                 f"({bytes_processed / 1024:.1f} KB processed)"
             )
+            if self.profiler is not None:
+                self.profiler.record_query(
+                    query_label,
+                    elapsed_ms=elapsed * 1000,
+                    bytes_processed=bytes_processed,
+                    row_count=len(rows),
+                    cache_status="miss",
+                )
 
             if future is not None and not future.done():
                 future.set_result(rows)
@@ -290,6 +317,13 @@ class BigQueryService:
             if stale is not None:
                 logger.warning(f"Returning stale cache for {cache_key[:8]}")
                 self._track_request_cache("stale")
+                if self.profiler is not None:
+                    self.profiler.record_query(
+                        query_label,
+                        elapsed_ms=0.0,
+                        row_count=len(stale),
+                        cache_status="stale",
+                    )
                 if future is not None and not future.done():
                     future.set_result(stale)
                 return stale
@@ -303,6 +337,13 @@ class BigQueryService:
             if stale is not None:
                 logger.warning(f"Returning stale cache for {cache_key[:8]}")
                 self._track_request_cache("stale")
+                if self.profiler is not None:
+                    self.profiler.record_query(
+                        query_label,
+                        elapsed_ms=0.0,
+                        row_count=len(stale),
+                        cache_status="stale",
+                    )
                 if future is not None and not future.done():
                     future.set_result(stale)
                 return stale
@@ -331,7 +372,7 @@ class BigQueryService:
             for key, value in params.items():
                 query = query.replace(f"@{key}", f"{value}")
 
-        return await self.query(query, params=params, use_cache=use_cache)
+        return await self.query(query, params=params, use_cache=use_cache, label=filename)
 
     async def warm_cache(self):
         """Warm the exact query shapes hit by the main UI."""

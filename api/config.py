@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     payload_cache_ttl_seconds: int = 900
     compression_minimum_size: int = 1024
     compression_level: int = 6
+    profiler_sample_size: int = 300
+    profiler_top_n: int = 20
 
     # ML Model
     model_path: str = "ml/models/delay_predictor.joblib"
