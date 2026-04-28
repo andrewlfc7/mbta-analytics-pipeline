@@ -14,8 +14,7 @@
     )
 }}
 
-
-predictions as (
+with predictions as (
     select
         prediction_id,
         predicted_arrival,
