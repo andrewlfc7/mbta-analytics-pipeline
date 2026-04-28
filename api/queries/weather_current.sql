@@ -1,8 +1,8 @@
 SELECT
-  temperature_2m AS temp_f,
+  ROUND((temperature_2m * 9.0 / 5.0) + 32.0, 1) AS temp_f,
   relative_humidity_2m AS humidity,
-  wind_speed_10m AS wind_mph,
-  precipitation AS precip_in,
+  ROUND(wind_speed_10m * 0.621371, 1) AS wind_mph,
+  ROUND(precipitation / 25.4, 3) AS precip_in,
   weather_code,
   CASE
     WHEN weather_code IN (0, 1) THEN 'Clear'

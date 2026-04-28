@@ -7,15 +7,31 @@ with source as (
 cleaned as (
     select
         {{ parse_ts(timestamp_col) }} as weather_timestamp,
-        temperature_2m as temperature_f,
+
+        -- Open-Meteo defaults to Celsius unless temperature_unit is set.
+        temperature_2m as temperature_c,
+        round((temperature_2m * 9.0 / 5.0) + 32.0, 1) as temperature_f,
+
         relative_humidity_2m as humidity_pct,
+
         precipitation as precipitation_mm,
+        round(precipitation / 25.4, 3) as precipitation_in,
+
         rain as rain_mm,
+        round(rain / 25.4, 3) as rain_in,
+
         snowfall as snowfall_cm,
-        wind_speed_10m as wind_speed_mph,
-        wind_gusts_10m as wind_gusts_mph,
+        round(snowfall / 2.54, 3) as snowfall_in,
+
+        wind_speed_10m as wind_speed_kmh,
+        round(wind_speed_10m * 0.621371, 1) as wind_speed_mph,
+
+        wind_gusts_10m as wind_gusts_kmh,
+        round(wind_gusts_10m * 0.621371, 1) as wind_gusts_mph,
+
         visibility as visibility_m,
         weather_code,
+
         case
             when weather_code in (0) then 'Clear'
             when weather_code in (1, 2, 3) then 'Cloudy'
