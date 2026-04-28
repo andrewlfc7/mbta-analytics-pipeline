@@ -1,5 +1,6 @@
 """Schedules extractor -- MBTA planned arrival/departure times (ALL modes)."""
 
+from datetime import date, timedelta
 from typing import Any
 
 import polars as pl
@@ -12,6 +13,9 @@ class SchedulesExtractor(BaseExtractor):
 
     Default params fetch all rail + ferry routes.
     Bus requires batched calls via extract_for_routes().
+
+    By default, fetches the next 7 service dates so schedule pages
+    can show upcoming service instead of only same-day service.
     """
 
     RAIL_AND_FERRY_ROUTES = [
@@ -29,6 +33,18 @@ class SchedulesExtractor(BaseExtractor):
         "Boat-EastBoston", "Boat-Lynn",
     ]
 
+
+    def __init__(self, *args, schedule_days: int = 7, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.schedule_days = schedule_days
+
+    def _date_range(self) -> list[str]:
+        start = date.today()
+        return [
+            (start + timedelta(days=i)).isoformat()
+            for i in range(self.schedule_days)
+        ]
+
     @property
     def entity_name(self) -> str:
         return "schedules"
@@ -39,25 +55,47 @@ class SchedulesExtractor(BaseExtractor):
 
     @property
     def is_dimension(self) -> bool:
-        return True
+        # Schedules are planned facts, not a pure dimension.
+        return False
+
+    def _date_range(self) -> list[str]:
+        start = date.today()
+        return [
+            (start + timedelta(days=i)).isoformat()
+            for i in range(self.schedule_days)
+        ]
+
 
     @property
     def params(self) -> dict[str, Any]:
-        return {"filter[route]": ",".join(self.RAIL_AND_FERRY_ROUTES)}
+        return {
+            "filter[route]": ",".join(self.RAIL_AND_FERRY_ROUTES),
+            "filter[date]": ",".join(self._date_range()),
+        }
 
-    def extract_for_routes(self, route_ids: list[str]) -> list[dict[str, Any]]:
+    def extract_for_routes(
+        self,
+        route_ids: list[str],
+        service_dates: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Extract schedules for a specific set of routes."""
+        dates = service_dates or self._date_range()
+
         self.logger.info(
             "extracting_batch",
             entity=self.entity_name,
             route_count=len(route_ids),
             first_route=route_ids[0],
+            dates=",".join(dates),
         )
 
         try:
             response = self.client.get(
                 self.endpoint,
-                params={"filter[route]": ",".join(route_ids)},
+                params={
+                    "filter[route]": ",".join(route_ids),
+                    "filter[date]": ",".join(dates),
+                },
             )
             response.raise_for_status()
             data = response.json()

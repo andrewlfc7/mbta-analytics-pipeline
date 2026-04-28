@@ -115,23 +115,23 @@ async def add_timing_header(request: Request, call_next):
     elapsed = time.perf_counter() - start
     global_cache_info = request.app.state.bq_service.get_cache_info()
     response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
-    response.headers["X-Cache-Hit-Rate"] = (
-        str(global_cache_info.get("hit_rate_pct", 0)) + "%"
-    )
+    response.headers["X-Cache-Hit-Rate"] = str(global_cache_info.get("hit_rate_pct", 0)) + "%"
     response.headers["X-Cache-Hits"] = str(request_cache_info["hits"])
     response.headers["X-Cache-Misses"] = str(request_cache_info["misses"])
     response.headers["X-Cache-Coalesced"] = str(request_cache_info["coalesced"])
     response.headers["X-Cache-Stale"] = str(request_cache_info["stale"])
     response.headers["X-Profile-Query-Count"] = str(request_profile["query_count"])
-    response.headers["X-Profile-Query-Time-Ms"] = str(
-        round(request_profile["query_time_ms"], 1)
-    )
+    response.headers["X-Profile-Query-Time-Ms"] = str(round(request_profile["query_time_ms"], 1))
     return response
 
 
 app.include_router(overview.router, prefix=f"{settings.api_prefix}/overview", tags=["Overview"])
-app.include_router(heatmap.router, prefix=f"{settings.api_prefix}/delays", tags=["Heatmap & Delays"])
-app.include_router(temporal.router, prefix=f"{settings.api_prefix}/delays/temporal", tags=["Temporal Analysis"])
+app.include_router(
+    heatmap.router, prefix=f"{settings.api_prefix}/delays", tags=["Heatmap & Delays"]
+)
+app.include_router(
+    temporal.router, prefix=f"{settings.api_prefix}/delays/temporal", tags=["Temporal Analysis"]
+)
 app.include_router(routes.router, prefix=f"{settings.api_prefix}/routes", tags=["Routes"])
 app.include_router(stations.router, prefix=f"{settings.api_prefix}/stations", tags=["Stations"])
 app.include_router(weather.router, prefix=f"{settings.api_prefix}/weather", tags=["Weather Impact"])

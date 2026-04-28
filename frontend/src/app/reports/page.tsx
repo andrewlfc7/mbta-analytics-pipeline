@@ -78,10 +78,10 @@ export default function ReportsPage() {
       ...Object.entries(system?.trips_by_mode || {}).map(([m, c]) => `  ${m}: ${(c as number).toLocaleString()}`),
       "",
       "=== TOP 10 HIGHEST DELAYS ===",
-      ...worstRoutes.map((r, i) => `  ${i + 1}. ${r.route_name || r.route_id} — ${(r.avg_delay_minutes || 0).toFixed(1)} min, ${(r.on_time_pct || 0).toFixed(1)}% on-time`),
+      ...worstRoutes.map((r, i) => `  ${i + 1}. ${r.route_name || r.route_id} - ${(r.avg_delay_minutes || 0).toFixed(1)} min, ${(r.on_time_pct || 0).toFixed(1)}% on-time`),
       "",
       "=== TOP 10 BEST ON-TIME ===",
-      ...bestRoutes.map((r, i) => `  ${i + 1}. ${r.route_name || r.route_id} — ${(r.on_time_pct || 0).toFixed(1)}% on-time`),
+      ...bestRoutes.map((r, i) => `  ${i + 1}. ${r.route_name || r.route_id} - ${(r.on_time_pct || 0).toFixed(1)}% on-time`),
       "",
       "=== WEATHER IMPACT ===",
       ...weather.map((w) => `  ${w.condition_category}: ${w.avg_delay_minutes} min avg delay (${w.observation_count} obs)`),
@@ -115,7 +115,7 @@ export default function ReportsPage() {
             Reports
           </h1>
           <p className="mt-2 text-[18px] text-slate-400">
-            Performance summary — {routes.length} routes analyzed
+            Performance summary - {routes.length} routes analyzed
           </p>
         </div>
         <div className="flex gap-2">

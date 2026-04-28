@@ -138,7 +138,7 @@ export default function APIExplorerPage() {
           API Explorer
         </h1>
         <p className="mt-2 text-[18px] text-slate-400">
-          Interactive endpoint testing — {ENDPOINTS.length} endpoints available
+          Interactive endpoint testing - {ENDPOINTS.length} endpoints available
         </p>
       </div>
 

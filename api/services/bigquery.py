@@ -17,8 +17,8 @@ from api.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-request_cache_context: contextvars.ContextVar[dict[str, int] | None] = (
-    contextvars.ContextVar("request_cache_context", default=None)
+request_cache_context: contextvars.ContextVar[dict[str, int] | None] = contextvars.ContextVar(
+    "request_cache_context", default=None
 )
 
 
@@ -77,9 +77,7 @@ class BigQueryService:
                     key_path,
                     scopes=["https://www.googleapis.com/auth/bigquery"],
                 )
-                self._client = bigquery.Client(
-                    project=self.project_id, credentials=credentials
-                )
+                self._client = bigquery.Client(project=self.project_id, credentials=credentials)
                 logger.info(f"BigQuery client created with service account: {key_path}")
             else:
                 self._client = bigquery.Client(project=self.project_id)
@@ -204,9 +202,7 @@ class BigQueryService:
     def get_cache_info(self) -> dict:
         """Return cache statistics for monitoring."""
         total = self.cache_stats["hits"] + self.cache_stats["misses"]
-        hit_rate = (
-            round(self.cache_stats["hits"] / total * 100, 1) if total > 0 else 0
-        )
+        hit_rate = round(self.cache_stats["hits"] / total * 100, 1) if total > 0 else 0
         return {
             "entries": len(self.cache),
             "payload_entries": len(self.payload_cache),
@@ -408,14 +404,26 @@ class BigQueryService:
             ("routes_hourly.sql", {"route_id": "Green-D"}),
             ("routes_hourly.sql", {"route_id": "Green-E"}),
             # Delays
-            ("heatmap_day_hour.sql", {"route_filter": "all", "direction": "all", "period_days": "30"}),
+            (
+                "heatmap_day_hour.sql",
+                {"route_filter": "all", "direction": "all", "period_days": "30"},
+            ),
             ("temporal_day_of_week.sql", {"route_filter": "all", "period_days": "90"}),
-            ("temporal_hourly.sql", {"route_filter": "all", "day_type": "all", "period_days": "90"}),
+            (
+                "temporal_hourly.sql",
+                {"route_filter": "all", "day_type": "all", "period_days": "90"},
+            ),
             ("temporal_rush_hour.sql", {"route_filter": "all", "period_days": "90"}),
             ("temporal_delay_probability.sql", {"route_filter": "all", "period_days": "90"}),
             # Stations
-            ("stations_performance_filtered.sql", {"sort_by": "delay_hotspot_score", "limit": "50"}),
-            ("stations_performance_filtered.sql", {"sort_by": "delay_hotspot_score", "limit": "100"}),
+            (
+                "stations_performance_filtered.sql",
+                {"sort_by": "delay_hotspot_score", "limit": "50"},
+            ),
+            (
+                "stations_performance_filtered.sql",
+                {"sort_by": "delay_hotspot_score", "limit": "100"},
+            ),
             ("delay_hotspots.sql", {"limit": "5"}),
             ("map_route_lines.sql", None),
             ("map_stations.sql", None),
@@ -450,6 +458,5 @@ class BigQueryService:
 
         elapsed = time.time() - start
         logger.info(
-            f"Cache warming complete: {success}/{success + failed} queries "
-            f"in {elapsed:.1f}s"
+            f"Cache warming complete: {success}/{success + failed} queries in {elapsed:.1f}s"
         )
