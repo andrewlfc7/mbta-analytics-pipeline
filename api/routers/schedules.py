@@ -18,14 +18,19 @@ def _current_mbta_service_date() -> str:
     return now.date().isoformat()
 
 
+
 def _date_window(start_date: str | None, end_date: str | None) -> dict[str, str]:
-    start = start_date or _current_mbta_service_date()
+    if start_date:
+        start = start_date
+    else:
+        service_date = datetime.fromisoformat(_current_mbta_service_date()).date()
+        start = (service_date - timedelta(days=1)).isoformat()
 
     if end_date:
         end = end_date
     else:
-        start_dt = datetime.fromisoformat(start)
-        end = (start_dt + timedelta(days=7)).date().isoformat()
+        start_dt = datetime.fromisoformat(start).date()
+        end = (start_dt + timedelta(days=8)).isoformat()
 
     return {"start_date": start, "end_date": end}
 
