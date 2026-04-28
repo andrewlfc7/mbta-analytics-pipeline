@@ -1,5 +1,6 @@
 """Schedules extractor -- MBTA planned arrival/departure times."""
 
+import time
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -100,6 +101,51 @@ class SchedulesExtractor(BaseExtractor):
             "filter[date]": self._date_range()[0],
         }
 
+    def _get_with_retries(
+        self,
+        params: dict[str, Any],
+        max_attempts: int = 5,
+        base_sleep_seconds: float = 2.0,
+    ):
+        """GET MBTA schedules with retry/backoff for transient API failures."""
+        last_error: Exception | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = self.client.get(self.endpoint, params=params)
+                response.raise_for_status()
+                return response
+            except Exception as exc:
+                last_error = exc
+
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                retryable = status_code in {429, 500, 502, 503, 504} or status_code is None
+
+                if not retryable or attempt == max_attempts:
+                    self.logger.error(
+                        "schedule_request_failed",
+                        attempt=attempt,
+                        max_attempts=max_attempts,
+                        status_code=status_code,
+                        params=params,
+                        error=str(exc),
+                    )
+                    raise
+
+                sleep_seconds = base_sleep_seconds * attempt
+                self.logger.warning(
+                    "schedule_request_retry",
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    status_code=status_code,
+                    sleep_seconds=sleep_seconds,
+                    params=params,
+                    error=str(exc),
+                )
+                time.sleep(sleep_seconds)
+
+        raise last_error  # should not be reached
+
     def extract(self) -> list[dict[str, Any]]:
         """Extract rail/ferry schedules across configured service dates."""
         all_records: list[dict[str, Any]] = []
@@ -112,14 +158,12 @@ class SchedulesExtractor(BaseExtractor):
                 service_date=service_date,
             )
 
-            response = self.client.get(
-                self.endpoint,
+            response = self._get_with_retries(
                 params={
                     "filter[route]": ",".join(self.RAIL_AND_FERRY_ROUTES),
                     "filter[date]": service_date,
-                },
+                }
             )
-            response.raise_for_status()
 
             data = response.json()
             records = self._parse_response(data)
@@ -154,14 +198,12 @@ class SchedulesExtractor(BaseExtractor):
             )
 
             try:
-                response = self.client.get(
-                    self.endpoint,
+                response = self._get_with_retries(
                     params={
                         "filter[route]": ",".join(route_ids),
                         "filter[date]": service_date,
-                    },
+                    }
                 )
-                response.raise_for_status()
 
                 data = response.json()
                 records = self._parse_response(data)

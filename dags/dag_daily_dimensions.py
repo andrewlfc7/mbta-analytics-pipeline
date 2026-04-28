@@ -185,5 +185,5 @@ with DAG(
 
     # Dependencies: routes/stops first, then schedules need routes
     [extract_routes, extract_stops] >> extract_trips
-    extract_trips >> extract_schedules_rail >> bus_schedule_tasks
+    extract_trips >> [extract_schedules_rail, *bus_schedule_tasks]
     weather

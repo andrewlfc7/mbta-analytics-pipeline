@@ -35,7 +35,7 @@ class BigQueryLoader:
     }
 
     DEDUPE_KEYS = {
-        "schedules": ["schedule_id", "trip_id", "stop_id"],
+        "schedules": ["schedule_id", "trip_id", "stop_id", "departure_time"],
         "weather": ["timestamp"],
         "predictions": ["prediction_id", "extracted_at"],
         "vehicles": ["vehicle_id", "extracted_at"],
