@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query, Request
 import asyncio
 import logging
+
+from fastapi import APIRouter, Query, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -34,10 +35,12 @@ async def find_routes(
     )
 
     # Get reliability data for found routes
-    route_ids = list(set(
-        [r.get("first_route_id") for r in routes if r.get("first_route_id")]
-        + [r.get("second_route_id") for r in routes if r.get("second_route_id")]
-    ))
+    route_ids = list(
+        set(
+            [r.get("first_route_id") for r in routes if r.get("first_route_id")]
+            + [r.get("second_route_id") for r in routes if r.get("second_route_id")]
+        )
+    )
 
     reliability: dict = {}
 
@@ -100,8 +103,12 @@ async def find_routes(
         # Calculate combined reliability
         if second_id:
             combined_otp = min(first_rel.get("on_time_pct", 70), second_rel.get("on_time_pct", 70))
-            combined_delay = (first_rel.get("avg_delay_minutes", 2) + second_rel.get("avg_delay_minutes", 2))
-            combined_risk = max(first_rel.get("delay_risk_pct", 10), second_rel.get("delay_risk_pct", 10))
+            combined_delay = first_rel.get("avg_delay_minutes", 2) + second_rel.get(
+                "avg_delay_minutes", 2
+            )
+            combined_risk = max(
+                first_rel.get("delay_risk_pct", 10), second_rel.get("delay_risk_pct", 10)
+            )
         else:
             combined_otp = first_rel.get("on_time_pct", 70)
             combined_delay = first_rel.get("avg_delay_minutes", 2)
@@ -109,7 +116,8 @@ async def find_routes(
 
         # Route alerts
         route_alerts = [
-            a for a in alerts
+            a
+            for a in alerts
             if first_id in str(a.get("affected_routes", ""))
             or (second_id and second_id in str(a.get("affected_routes", "")))
         ]
@@ -117,31 +125,41 @@ async def find_routes(
         option = {
             "connection_type": route.get("connection_type", "direct"),
             "transfers": route.get("transfers", 0),
-            "legs": [{
-                "route_id": first_id,
-                "route_name": route.get("first_route_name", first_id),
-                "route_type": route.get("first_route_type"),
-                "route_type_desc": route.get("first_route_type_desc", ""),
-                "route_color": route.get("first_route_color", "7F7F7F"),
-            }],
+            "legs": [
+                {
+                    "route_id": first_id,
+                    "route_name": route.get("first_route_name", first_id),
+                    "route_type": route.get("first_route_type"),
+                    "route_type_desc": route.get("first_route_type_desc", ""),
+                    "route_color": route.get("first_route_color", "7F7F7F"),
+                }
+            ],
             "reliability": {
                 "on_time_pct": combined_otp,
                 "avg_delay_minutes": round(combined_delay, 1),
                 "delay_risk_pct": combined_risk,
-                "label": "High" if combined_otp >= 85 else "Good" if combined_otp >= 70 else "Fair" if combined_otp >= 55 else "Poor",
+                "label": "High"
+                if combined_otp >= 85
+                else "Good"
+                if combined_otp >= 70
+                else "Fair"
+                if combined_otp >= 55
+                else "Poor",
             },
             "active_alerts": len(route_alerts),
             "alert_summaries": [a.get("header", "")[:80] for a in route_alerts[:3]],
         }
 
         if second_id:
-            option["legs"].append({
-                "route_id": second_id,
-                "route_name": route.get("second_route_name", second_id),
-                "route_type": route.get("second_route_type"),
-                "route_type_desc": route.get("second_route_type_desc", ""),
-                "route_color": route.get("second_route_color", "7F7F7F"),
-            })
+            option["legs"].append(
+                {
+                    "route_id": second_id,
+                    "route_name": route.get("second_route_name", second_id),
+                    "route_type": route.get("second_route_type"),
+                    "route_type_desc": route.get("second_route_type_desc", ""),
+                    "route_color": route.get("second_route_color", "7F7F7F"),
+                }
+            )
             option["transfer_stop"] = {
                 "stop_id": route.get("transfer_stop_id"),
                 "stop_name": route.get("transfer_stop_name"),

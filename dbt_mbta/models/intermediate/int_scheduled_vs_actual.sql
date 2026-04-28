@@ -14,7 +14,8 @@
     )
 }}
 
-with predictions as (
+
+predictions as (
     select
         prediction_id,
         predicted_arrival,
@@ -32,16 +33,7 @@ with predictions as (
         trip_id,
         vehicle_id,
         extracted_at,
-        -- Extract the service date from the predicted time
-        -- Predictions come in UTC; MBTA service day runs ~5AM-2AM EDT
-        -- Convert to EDT (UTC-4) before extracting date so late-night
-        -- trips land on the correct service day
-        DATE(
-            TIMESTAMP_SUB(
-                coalesce(predicted_arrival, predicted_departure),
-                INTERVAL 4 HOUR
-            )
-        ) as service_date
+        {{ mbta_service_date('coalesce(predicted_arrival, predicted_departure)') }} as service_date
     from {{ ref('stg_predictions') }}
     where coalesce(predicted_arrival, predicted_departure) is not null
 ),
@@ -54,13 +46,7 @@ schedules as (
         scheduled_departure,
         stop_sequence,
         timepoint,
-        -- Same logic: convert schedule times to EDT before extracting date
-        DATE(
-            TIMESTAMP_SUB(
-                coalesce(scheduled_arrival, scheduled_departure),
-                INTERVAL 4 HOUR
-            )
-        ) as service_date
+        {{ mbta_service_date('coalesce(scheduled_arrival, scheduled_departure)') }} as service_date
     from {{ ref('stg_schedules') }}
 ),
 

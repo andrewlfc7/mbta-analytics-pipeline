@@ -23,6 +23,13 @@ MODE_KEYWORDS = {
     "ferry": "Ferry",
 }
 
+TRIP_REQUEST_RE = re.compile(
+    r"\bfrom\s+(.+?)\s+to\s+(.+?)"
+    r"(?:\s+(?:right now|now|today|tonight|this morning|"
+    r"this afternoon|this evening)|[?.!,]|$)",
+    re.IGNORECASE,
+)
+
 
 class AssistantQueryRequest(BaseModel):
     message: str = Field(min_length=2, max_length=500)
@@ -37,21 +44,22 @@ def _detect_route_or_mode(message: str) -> str | None:
 
 
 def _extract_trip_request(message: str) -> tuple[str, str] | None:
-    match = re.search(
-        r"\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:right now|now|today|tonight|this morning|this afternoon|this evening)|[?.!,]|$)",
-        message,
-        re.IGNORECASE,
-    )
+    match = TRIP_REQUEST_RE.search(message)
     if not match:
         return None
     return match.group(1).strip(), match.group(2).strip()
 
 
-async def _find_best_stop(bq, query: str) -> dict | None:
+async def _find_stop_candidates(bq, query: str, limit: int = 8) -> list[dict]:
     rows = await bq.query_from_file(
         "trip_search_stops.sql",
         params={"query": query},
     )
+    return rows[:limit] if rows else []
+
+
+async def _find_best_stop(bq, query: str) -> dict | None:
+    rows = await _find_stop_candidates(bq, query, limit=1)
     return rows[0] if rows else None
 
 
@@ -181,27 +189,47 @@ async def assistant_query(payload: AssistantQueryRequest, request: Request):
     trip_request = _extract_trip_request(message)
     if trip_request:
         origin_query, destination_query = trip_request
-        origin = await _find_best_stop(bq, origin_query)
-        destination = await _find_best_stop(bq, destination_query)
+        origin_candidates = await _find_stop_candidates(bq, origin_query, limit=8)
+        destination_candidates = await _find_stop_candidates(bq, destination_query, limit=8)
 
-        if not origin or not destination:
+        if not origin_candidates or not destination_candidates:
             return {
                 "kind": "trip",
-                "answer": "I couldn't confidently match both stops. Try using a full stop name like 'Back Bay' or 'Harvard'.",
+                "answer": (
+                    "I couldn't confidently match both stops. Try using a nearby stop, "
+                    "station, or neighborhood name like 'Forest Hills' or 'Hyde Park Ave'."
+                ),
                 "cards": [],
                 "items": [],
                 "suggestions": SUGGESTIONS,
             }
 
-        options = await _build_trip_options(
-            bq,
-            origin["stop_id"],
-            destination["stop_id"],
-        )
+        origin = origin_candidates[0]
+        destination = destination_candidates[0]
+        options = []
+
+        for o in origin_candidates:
+            for d in destination_candidates:
+                candidate_options = await _build_trip_options(
+                    bq,
+                    o["stop_id"],
+                    d["stop_id"],
+                )
+                if candidate_options:
+                    origin = o
+                    destination = d
+                    options = candidate_options
+                    break
+            if options:
+                break
+
         if not options:
             return {
                 "kind": "trip",
-                "answer": f"I couldn't find a route from {origin['stop_name']} to {destination['stop_name']} right now.",
+                "answer": (
+                            f"I couldn't find a route from {origin['stop_name']} "
+                            f"to {destination['stop_name']} right now."
+                        ),
                 "cards": [],
                 "items": [],
                 "suggestions": SUGGESTIONS,
@@ -218,7 +246,8 @@ async def assistant_query(payload: AssistantQueryRequest, request: Request):
         return {
             "kind": "trip",
             "answer": (
-                f"Best option from {origin['stop_name']} to {destination['stop_name']} is {leg_names}. "
+                f"Best option from {origin['stop_name']} "
+                f"to {destination['stop_name']} is {leg_names}. "
                 f"It's {best['reliability']['on_time_pct']}% on-time with about "
                 f"{best['reliability']['avg_delay_minutes']} minutes of average delay."
             ),
@@ -350,7 +379,9 @@ async def assistant_query(payload: AssistantQueryRequest, request: Request):
         }
 
     route_or_mode = _detect_route_or_mode(message)
-    if route_or_mode or any(term in lower for term in ["alert", "running normally", "detour", "service issue"]):
+    if route_or_mode or any(
+        term in lower for term in ["alert", "running normally", "detour", "service issue"]
+    ):
         alerts = await bq.query_from_file(
             "alerts_active.sql",
             params={"severity": "all", "limit": "20"},
@@ -392,7 +423,10 @@ async def assistant_query(payload: AssistantQueryRequest, request: Request):
         normal_text = "running mostly normally" if count == 0 else "showing active disruptions"
         return {
             "kind": "alerts",
-            "answer": f"{subject} is {normal_text}. I found {count} active alert{'s' if count != 1 else ''}.",
+            "answer": (
+                        f"{subject} is {normal_text}. "
+                        f"I found {count} active alert{'s' if count != 1 else ''}."
+                    ),
             "cards": [
                 {
                     "title": "Active Alerts",

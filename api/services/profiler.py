@@ -5,7 +5,6 @@ from collections import deque
 from threading import Lock
 from typing import Any
 
-
 request_profile_context: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("request_profile_context", default=None)
 )
