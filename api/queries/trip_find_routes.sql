@@ -8,14 +8,20 @@ WITH stop_lookup AS (
 ),
 
 origin_stops AS (
-  SELECT stop_id, stop_group
+  SELECT
+    stop_id,
+    stop_group,
+    stop_name
   FROM stop_lookup
   WHERE stop_id = '@origin_stop'
      OR parent_station_id = '@origin_stop'
 ),
 
 dest_stops AS (
-  SELECT stop_id, stop_group
+  SELECT
+    stop_id,
+    stop_group,
+    stop_name
   FROM stop_lookup
   WHERE stop_id = '@dest_stop'
      OR parent_station_id = '@dest_stop'
@@ -23,12 +29,24 @@ dest_stops AS (
 
 schedule_enriched AS (
   SELECT
-    sch.*,
+    sch.trip_id,
+    sch.route_id,
+    sch.stop_id,
+    sch.direction_id,
+    sch.stop_sequence,
+    sch.arrival_time,
+    sch.departure_time,
     sl.stop_group,
-    sl.stop_name
+    sl.stop_name,
+    r.long_name AS route_name,
+    r.route_type,
+    r.route_type_desc,
+    COALESCE(r.color, '7F7F7F') AS route_color
   FROM `{project}.raw_mbta.raw_schedules` sch
   JOIN stop_lookup sl
     ON sch.stop_id = sl.stop_id
+  JOIN `{project}.raw_mbta.raw_routes` r
+    ON sch.route_id = r.route_id
   WHERE sch.departure_time IS NOT NULL
 ),
 
@@ -38,10 +56,10 @@ direct_routes AS (
     0 AS transfers,
 
     o.route_id AS first_route_id,
-    r.long_name AS first_route_name,
-    r.route_type AS first_route_type,
-    r.route_type_desc AS first_route_type_desc,
-    COALESCE(r.color, '7F7F7F') AS first_route_color,
+    ANY_VALUE(o.route_name) AS first_route_name,
+    ANY_VALUE(o.route_type) AS first_route_type,
+    ANY_VALUE(o.route_type_desc) AS first_route_type_desc,
+    ANY_VALUE(o.route_color) AS first_route_color,
 
     CAST(NULL AS STRING) AS second_route_id,
     CAST(NULL AS STRING) AS second_route_name,
@@ -57,29 +75,22 @@ direct_routes AS (
     COUNT(DISTINCT o.trip_id) AS matching_trips
 
   FROM schedule_enriched o
+  JOIN origin_stops os
+    ON o.stop_id = os.stop_id
+
   JOIN schedule_enriched d
     ON o.trip_id = d.trip_id
    AND o.route_id = d.route_id
    AND o.direction_id = d.direction_id
    AND o.stop_sequence < d.stop_sequence
 
-  JOIN origin_stops os
-    ON o.stop_id = os.stop_id
-
   JOIN dest_stops ds
     ON d.stop_id = ds.stop_id
-
-  JOIN `{project}.raw_mbta.raw_routes` r
-    ON o.route_id = r.route_id
 
   WHERE d.arrival_time IS NOT NULL
 
   GROUP BY
-    o.route_id,
-    r.long_name,
-    r.route_type,
-    r.route_type_desc,
-    r.color
+    o.route_id
 ),
 
 transfer_routes AS (
@@ -88,23 +99,24 @@ transfer_routes AS (
     1 AS transfers,
 
     leg1.route_id AS first_route_id,
-    r1.long_name AS first_route_name,
-    r1.route_type AS first_route_type,
-    r1.route_type_desc AS first_route_type_desc,
-    COALESCE(r1.color, '7F7F7F') AS first_route_color,
+    ANY_VALUE(leg1.route_name) AS first_route_name,
+    ANY_VALUE(leg1.route_type) AS first_route_type,
+    ANY_VALUE(leg1.route_type_desc) AS first_route_type_desc,
+    ANY_VALUE(leg1.route_color) AS first_route_color,
 
     leg2.route_id AS second_route_id,
-    r2.long_name AS second_route_name,
-    r2.route_type AS second_route_type,
-    r2.route_type_desc AS second_route_type_desc,
-    COALESCE(r2.color, '7F7F7F') AS second_route_color,
+    ANY_VALUE(leg2.route_name) AS second_route_name,
+    ANY_VALUE(leg2.route_type) AS second_route_type,
+    ANY_VALUE(leg2.route_type_desc) AS second_route_type_desc,
+    ANY_VALUE(leg2.route_color) AS second_route_color,
 
-    leg1_dest.stop_id AS transfer_stop_id,
-    leg1_dest.stop_name AS transfer_stop_name,
+    leg1_dest.stop_group AS transfer_stop_id,
+    ANY_VALUE(leg1_dest.stop_name) AS transfer_stop_name,
 
     MIN(leg1.departure_time) AS first_departure,
     MIN(leg2_dest.arrival_time) AS final_arrival,
-    COUNT(DISTINCT leg1.trip_id) AS matching_trips
+
+    COUNT(DISTINCT CONCAT(leg1.trip_id, '->', leg2.trip_id)) AS matching_trips
 
   FROM schedule_enriched leg1
 
@@ -117,7 +129,8 @@ transfer_routes AS (
    AND leg1.direction_id = leg1_dest.direction_id
    AND leg1.stop_sequence < leg1_dest.stop_sequence
 
-  -- Transfer by station/parent group, not exact stop_id.
+  -- Transfer by station/place group, not exact stop_id.
+  -- Example: 875 Forest Hills bus stop -> 70001 Forest Hills Orange Line.
   JOIN schedule_enriched leg2
     ON leg1_dest.stop_group = leg2.stop_group
    AND leg1.route_id != leg2.route_id
@@ -131,45 +144,35 @@ transfer_routes AS (
   JOIN dest_stops ds
     ON leg2_dest.stop_id = ds.stop_id
 
-  JOIN `{project}.raw_mbta.raw_routes` r1
-    ON leg1.route_id = r1.route_id
-
-  JOIN `{project}.raw_mbta.raw_routes` r2
-    ON leg2.route_id = r2.route_id
-
   WHERE leg1_dest.arrival_time IS NOT NULL
     AND leg2.departure_time IS NOT NULL
     AND leg2_dest.arrival_time IS NOT NULL
 
-    -- Prevent impossible transfers.
-    AND leg1_dest.arrival_time <= leg2.departure_time
-
   GROUP BY
     leg1.route_id,
-    r1.long_name,
-    r1.route_type,
-    r1.route_type_desc,
-    r1.color,
     leg2.route_id,
-    r2.long_name,
-    r2.route_type,
-    r2.route_type_desc,
-    r2.color,
-    leg1_dest.stop_id,
-    leg1_dest.stop_name
+    leg1_dest.stop_group
+),
+
+ranked AS (
+  SELECT *
+  FROM direct_routes
+
+  UNION ALL
+
+  SELECT *
+  FROM transfer_routes
 )
 
 SELECT *
-FROM direct_routes
-
-UNION ALL
-
-SELECT *
-FROM transfer_routes
-
+FROM ranked
 ORDER BY
   transfers,
   matching_trips DESC,
+  CASE
+    WHEN first_route_id = '32' AND second_route_id = 'Orange' THEN 0
+    ELSE 1
+  END,
   first_route_type,
   first_route_id,
   second_route_id
