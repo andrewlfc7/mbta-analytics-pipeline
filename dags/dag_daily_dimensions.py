@@ -122,7 +122,7 @@ with DAG(
     dag_id="daily_dimensions",
     default_args=default_args,
     description="Extract and load MBTA dimension tables daily (all modes)",
-    schedule_interval="30 6 * * *",
+    schedule_interval="10 7 * * *",
     start_date=datetime(2025, 1, 1),
     max_active_runs=1,
     max_active_tasks=3,
