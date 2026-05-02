@@ -72,6 +72,12 @@ scheduled_trips AS (
     AND service_seconds <= (SELECT current_service_seconds FROM current_clock)
 ),
 
+selected_performance_day AS (
+  SELECT MAX(service_date) AS service_date
+  FROM `{project}.intermediate.int_scheduled_vs_actual`
+  WHERE service_date <= (SELECT service_date FROM selected_service_day)
+),
+
 performance AS (
   SELECT
     COUNT(*) AS prediction_events,

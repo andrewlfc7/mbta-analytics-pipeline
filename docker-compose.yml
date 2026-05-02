@@ -11,8 +11,8 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
-    AIRFLOW__CORE__PARALLELISM: "2"
-    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "2"
+    AIRFLOW__CORE__PARALLELISM: "4"
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "4"
     AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: "1"
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "60"
     AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: "60"
@@ -61,27 +61,41 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    user: "0:0"
-    entrypoint: /bin/bash
+    user: "1001:0"
     command:
-      - -c
+      - bash
+      - -lc
       - |
         set -e
+
         echo "=== Fixing ALL directory permissions ==="
+
         mkdir -p /opt/airflow/logs/scheduler /opt/airflow/logs/dag_processor_manager
         chown -R 1001:0 /opt/airflow/logs
         chmod -R 775 /opt/airflow/logs
         find /opt/airflow/logs -type d -exec chmod 2775 {} +
+
         mkdir -p /opt/airflow/dbt_mbta/logs /opt/airflow/dbt_mbta/target /opt/airflow/dbt_mbta/dbt_packages
         chown -R 1001:0 /opt/airflow/dbt_mbta
         chmod -R 775 /opt/airflow/dbt_mbta
+
         mkdir -p /opt/airflow/data/raw
         chown -R 1001:0 /opt/airflow/data
         chmod -R 775 /opt/airflow/data
+
         echo "=== Permissions ==="
         ls -lan /opt/airflow/logs/
+
         airflow db migrate
-        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true
+
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin || true
+
         echo "=== Init complete ==="
     restart: "no"
     deploy:
@@ -92,7 +106,7 @@ services:
   airflow-webserver:
     <<: *airflow-common
     user: "1001:0"
-    command: airflow webserver --port 8080
+    command: webserver
     ports:
       - "8080:8080"
     healthcheck:
@@ -109,25 +123,38 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
-    user: "0:0"
-    entrypoint: /bin/bash
-    command: ["/opt/airflow/scheduler-entrypoint.sh"]
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./src:/opt/airflow/src
-      - ./data:/opt/airflow/data
-      - ./dbt_mbta:/opt/airflow/dbt_mbta
-      - ./great_expectations:/opt/airflow/great_expectations
-      - ./.env:/opt/airflow/.env
-      - /home/Drew/mbta-sa-key.json:/opt/airflow/keys/mbta-sa-key.json:ro
-      - ./logs:/opt/airflow/logs
-      - ./scheduler-entrypoint.sh:/opt/airflow/scheduler-entrypoint.sh:ro
+    user: "1001:0"
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+
+        echo "=== Scheduler pre-flight ==="
+        TODAY=$$(date -u +%Y-%m-%d)
+
+        mkdir -p "/opt/airflow/logs/scheduler/$$TODAY"
+        chmod 2775 "/opt/airflow/logs/scheduler/$$TODAY" 2>/dev/null || true
+
+        mkdir -p /tmp/dbt_logs /tmp/dbt_target
+        chmod 775 /tmp/dbt_logs /tmp/dbt_target 2>/dev/null || true
+
+        echo "=== Runtime identity ==="
+        id
+        getent passwd "$(id -u)" || true
+
+        echo "=== Scheduler log dir ==="
+        ls -lan /opt/airflow/logs/scheduler/ || true
+        ls -lan "/opt/airflow/logs/scheduler/$$TODAY/" || true
+
+        echo "=== Starting scheduler ==="
+        exec airflow scheduler
     healthcheck:
-      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
       interval: 60s
-      timeout: 10s
+      timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 180s
     restart: always
     deploy:
       resources:

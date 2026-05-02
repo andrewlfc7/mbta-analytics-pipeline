@@ -437,11 +437,6 @@ class BigQueryService:
             ("quality_overview.sql", None),
             ("quality_alerts.sql", None),
             # Schedules
-            ("schedules_by_route.sql", None),
-            ("schedules_timetable.sql", {"route_id": "Red", "direction_id": "0"}),
-            ("schedules_timetable.sql", {"route_id": "Orange", "direction_id": "0"}),
-            ("schedules_timetable.sql", {"route_id": "Blue", "direction_id": "0"}),
-            ("schedules_timetable.sql", {"route_id": "Green-B", "direction_id": "0"}),
         ]
 
         success = 0

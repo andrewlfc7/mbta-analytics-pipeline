@@ -11,6 +11,11 @@ def _format_mode_key(mode: str | None) -> str:
     return mode.lower().replace(" ", "_") if mode else "unknown"
 
 
+def _num(value, default=0.0):
+    """Return numeric value with None handled safely."""
+    return default if value is None else value
+
+
 @router.get(
     "/system",
     summary="System-wide KPI overview (enhanced)",
@@ -43,12 +48,15 @@ async def get_system_overview(
         c = current[0]
         p = previous[0] if previous else {}
 
-        prev_on_time = p.get("on_time_pct", c.get("on_time_pct", 0))
-        prev_delay = p.get("avg_delay_minutes", c.get("avg_delay_minutes", 0))
-        prev_trips = p.get("total_trips", c.get("total_trips", 0))
-        prev_alerts = p.get("active_alerts", c.get("active_alerts", 0))
+        current_on_time = _num(c.get("on_time_pct"))
+        current_delay = _num(c.get("avg_delay_minutes"))
+        current_alerts = _num(c.get("active_alerts"))
+        total_trips = _num(c.get("total_trips"))
 
-        total_trips = c.get("total_trips", 0)
+        prev_on_time = _num(p.get("on_time_pct"), current_on_time)
+        prev_delay = _num(p.get("avg_delay_minutes"), current_delay)
+        prev_trips = _num(p.get("total_trips"), total_trips)
+        prev_alerts = _num(p.get("active_alerts"), current_alerts)
         trips_change_pct = round(
             ((total_trips - prev_trips) / prev_trips * 100)
             if prev_trips > 0
@@ -58,22 +66,22 @@ async def get_system_overview(
 
         return {
             "total_trips": total_trips,
-            "on_time_pct": c.get("on_time_pct", 0),
-            "avg_delay_minutes": c.get("avg_delay_minutes", 0),
-            "active_alerts": c.get("active_alerts", 0),
+            "on_time_pct": current_on_time,
+            "avg_delay_minutes": current_delay,
+            "active_alerts": current_alerts,
             "critical_alerts": c.get("critical_alerts", 0),
             "major_alerts": c.get("major_alerts", 0),
             "minor_alerts": c.get("minor_alerts", 0),
             "info_alerts": c.get("info_alerts", 0),
             "on_time_pct_change": round(
-                c.get("on_time_pct", 0) - prev_on_time, 1
+                current_on_time - prev_on_time, 1
             ),
             "avg_delay_change": round(
-                c.get("avg_delay_minutes", 0) - prev_delay, 1
+                current_delay - prev_delay, 1
             ),
             "total_trips_change": total_trips - prev_trips,
             "trips_change_pct": trips_change_pct,
-            "active_alerts_change": c.get("active_alerts", 0) - prev_alerts,
+            "active_alerts_change": current_alerts - prev_alerts,
             "trips_by_mode": trips_by_mode,
             "last_updated": str(c.get("last_updated", "")),
         }
@@ -127,12 +135,15 @@ async def get_dashboard_snapshot(request: Request):
     if current:
         c = current[0]
         p = previous[0] if previous else {}
-        prev_on_time = p.get("on_time_pct", c.get("on_time_pct", 0))
-        prev_delay = p.get("avg_delay_minutes", c.get("avg_delay_minutes", 0))
-        prev_trips = p.get("total_trips", c.get("total_trips", 0))
-        prev_alerts = p.get("active_alerts", c.get("active_alerts", 0))
+        current_on_time = _num(c.get("on_time_pct"))
+        current_delay = _num(c.get("avg_delay_minutes"))
+        current_alerts = _num(c.get("active_alerts"))
+        total_trips = _num(c.get("total_trips"))
 
-        total_trips = c.get("total_trips", 0)
+        prev_on_time = _num(p.get("on_time_pct"), current_on_time)
+        prev_delay = _num(p.get("avg_delay_minutes"), current_delay)
+        prev_trips = _num(p.get("total_trips"), total_trips)
+        prev_alerts = _num(p.get("active_alerts"), current_alerts)
         trips_change_pct = round(
             ((total_trips - prev_trips) / prev_trips * 100)
             if prev_trips > 0
@@ -142,22 +153,22 @@ async def get_dashboard_snapshot(request: Request):
 
         system_payload = {
             "total_trips": total_trips,
-            "on_time_pct": c.get("on_time_pct", 0),
-            "avg_delay_minutes": c.get("avg_delay_minutes", 0),
-            "active_alerts": c.get("active_alerts", 0),
+            "on_time_pct": current_on_time,
+            "avg_delay_minutes": current_delay,
+            "active_alerts": current_alerts,
             "critical_alerts": c.get("critical_alerts", 0),
             "major_alerts": c.get("major_alerts", 0),
             "minor_alerts": c.get("minor_alerts", 0),
             "info_alerts": c.get("info_alerts", 0),
             "on_time_pct_change": round(
-                c.get("on_time_pct", 0) - prev_on_time, 1
+                current_on_time - prev_on_time, 1
             ),
             "avg_delay_change": round(
-                c.get("avg_delay_minutes", 0) - prev_delay, 1
+                current_delay - prev_delay, 1
             ),
             "total_trips_change": total_trips - prev_trips,
             "trips_change_pct": trips_change_pct,
-            "active_alerts_change": c.get("active_alerts", 0) - prev_alerts,
+            "active_alerts_change": current_alerts - prev_alerts,
             "trips_by_mode": trips_by_mode,
             "last_updated": str(c.get("last_updated", "")),
         }
