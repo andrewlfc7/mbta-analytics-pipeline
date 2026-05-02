@@ -191,7 +191,7 @@ async def get_route_ranking(
     request: Request,
     period: str = Query("30d"),
     mode: str = Query("all"),
-    limit: int = Query(10, ge=1, le=50),
+    limit: int = Query(10, ge=1),
 ):
     bq = request.app.state.bq_service
 
