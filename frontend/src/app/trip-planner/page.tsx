@@ -266,7 +266,7 @@ export default function TripPlannerPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-5">
           <DashboardCard
             variant="light"
@@ -454,7 +454,7 @@ export default function TripPlannerPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-8">
           {!result && !loading ? (
             <DashboardCard
@@ -553,7 +553,7 @@ export default function TripPlannerPage() {
                               </p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                               <StatBlock label="Reliability" value={`${option.reliability.on_time_pct}%`} valueClass={relColor} />
                               <StatBlock label="Delay Risk" value={`${option.reliability.delay_risk_pct}%`} />
                               <StatBlock label="Avg Delay" value={`${option.reliability.avg_delay_minutes.toFixed(1)} min`} />
@@ -624,7 +624,7 @@ export default function TripPlannerPage() {
         <div className="space-y-4 xl:col-span-4">
           <DashboardCard variant="light" title="Current Conditions">
             {result?.weather ? (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <ConditionMetric
                   icon={<Thermometer className="h-4 w-4 text-orange-500" />}
                   value={`${Math.round(result.weather.temp_f || 0)}°F`}

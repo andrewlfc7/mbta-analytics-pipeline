@@ -142,7 +142,7 @@ export default function APIExplorerPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Endpoint list */}
         <div className="col-span-4">
           <DashboardCard variant="light" title="Endpoints">

@@ -120,7 +120,7 @@ export function DashboardShell({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div>
           <h1 className="text-5xl font-semibold tracking-tight text-white">
             Operations Dashboard
@@ -147,7 +147,7 @@ export function DashboardShell({
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KPICard
           variant="light"
           title="Total Trips Today"
@@ -201,7 +201,7 @@ export function DashboardShell({
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-3">
           <DashboardCard
             variant="light"
@@ -249,7 +249,7 @@ export function DashboardShell({
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-5">
           <DashboardCard
             variant="light"

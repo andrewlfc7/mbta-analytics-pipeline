@@ -99,7 +99,7 @@ export default function ReportsPage() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 bg-[#1E293B] rounded-lg animate-pulse" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-[#1E293B] rounded-xl animate-pulse" />)}
         </div>
         <div className="h-96 bg-[#1E293B] rounded-xl animate-pulse" />
@@ -134,7 +134,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { icon: BarChart3, iconColor: "text-blue-500", label: "Total Trips", value: system?.total_trips?.toLocaleString() || "--", subtitle: "Daily system volume", subtitleColor: "default" as const },
           { icon: TrendingUp, iconColor: "text-emerald-500", label: "On-Time", value: system?.on_time_pct ? `${system.on_time_pct}%` : "--", subtitle: "System reliability", subtitleColor: "green" as const },
@@ -156,7 +156,7 @@ export default function ReportsPage() {
 
       {system?.trips_by_mode && Object.keys(system.trips_by_mode).length > 0 && (
         <DashboardCard variant="light" title="Trips by Mode">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {Object.entries(system.trips_by_mode).map(([mode, count]) => (
               <div key={mode} className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-5 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 capitalize">
@@ -172,7 +172,7 @@ export default function ReportsPage() {
         </DashboardCard>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardCard variant="light" title="Highest Delays" action={<span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Top 10</span>}>
           {worstRoutes.length === 0 ? (
             <p className="text-[13px] text-slate-500 text-center py-8">No delay data</p>
