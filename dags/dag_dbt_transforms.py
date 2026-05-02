@@ -34,24 +34,30 @@ with DAG(
     dbt_staging = BashOperator(
         task_id="dbt_run_staging",
         bash_command=(
-            f"mkdir -p {DBT_LOG_DIR} && cd {DBT_DIR} && {DBT_BIN} --log-path {DBT_LOG_DIR} run --select staging"
-            f" --profiles-dir {DBT_DIR} --target {DBT_TARGET}"
+            f"mkdir -p {DBT_LOG_DIR} && "
+            f"cd {DBT_DIR} && "
+            f"{DBT_BIN} --log-path {DBT_LOG_DIR} run --select staging "
+            f"--profiles-dir {DBT_DIR} --target {DBT_TARGET}"
         ),
     )
 
     dbt_intermediate = BashOperator(
         task_id="dbt_run_intermediate",
         bash_command=(
-            f"mkdir -p {DBT_LOG_DIR} && cd {DBT_DIR} && {DBT_BIN} --log-path {DBT_LOG_DIR} run --select intermediate"
-            f" --profiles-dir {DBT_DIR} --target {DBT_TARGET}"
+            f"mkdir -p {DBT_LOG_DIR} && "
+            f"cd {DBT_DIR} && "
+            f"{DBT_BIN} --log-path {DBT_LOG_DIR} run --select intermediate "
+            f"--profiles-dir {DBT_DIR} --target {DBT_TARGET}"
         ),
     )
 
     dbt_marts = BashOperator(
         task_id="dbt_run_marts",
         bash_command=(
-            f"mkdir -p {DBT_LOG_DIR} && cd {DBT_DIR} && {DBT_BIN} --log-path {DBT_LOG_DIR} run --select marts"
-            f" --profiles-dir {DBT_DIR} --target {DBT_TARGET}"
+            f"mkdir -p {DBT_LOG_DIR} && "
+            f"cd {DBT_DIR} && "
+            f"{DBT_BIN} --log-path {DBT_LOG_DIR} run --select marts "
+            f"--profiles-dir {DBT_DIR} --target {DBT_TARGET}"
         ),
     )
 
