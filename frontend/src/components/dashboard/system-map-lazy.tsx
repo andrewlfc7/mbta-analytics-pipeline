@@ -8,7 +8,7 @@ const SystemMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
+      <div className="flex h-[320px] sm:h-[420px] xl:h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
         <div className="flex flex-col items-center gap-2">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
           <span className="text-[11px] text-slate-500">Loading map...</span>
@@ -65,7 +65,7 @@ export function LazySystemMap() {
       {shouldLoad ? (
         <SystemMap />
       ) : (
-        <div className="flex h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
+        <div className="flex h-[320px] sm:h-[420px] xl:h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
           <div className="flex flex-col items-center gap-2">
             <div className="h-10 w-10 rounded-full border border-slate-200 bg-white" />
             <span className="text-[11px] text-slate-500">

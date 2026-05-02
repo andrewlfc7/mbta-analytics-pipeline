@@ -66,14 +66,21 @@ export function useApi<T>(
         }
       }
 
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
 
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.status}`);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+
+        const json = await res.json();
+        setData(json);
+      } finally {
+        clearTimeout(timeout);
       }
-
-      const json = await res.json();
-      setData(json);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch data";
       setError(message);

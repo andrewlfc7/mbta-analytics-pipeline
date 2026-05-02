@@ -4,6 +4,14 @@ const SERVER_URL =
   "";
 const CLIENT_URL = "/api/proxy";
 
+const CLIENT_CACHE_TTL_MS = 15_000;
+
+const clientCache = new Map<
+  string,
+  { expiresAt: number; promise: Promise<unknown> }
+>();
+
+
 interface FetchOptions {
   params?: Record<string, string | number | undefined>;
   revalidate?: number;
@@ -41,16 +49,67 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
 }
 
 /** Client-side fetch — uses proxy to avoid mixed content */
+interface ClientFetchOptions {
+  params?: Record<string, string | number | undefined>;
+  signal?: AbortSignal;
+}
+
+function isClientFetchOptions(value: unknown): value is ClientFetchOptions {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    ("params" in value || "signal" in value)
+  );
+}
+
 export async function clientFetch<T>(
   endpoint: string,
-  params?: Record<string, string | number | undefined>
+  paramsOrOptions?: Record<string, string | number | undefined> | ClientFetchOptions
 ): Promise<T> {
   const base = typeof window !== "undefined" ? CLIENT_URL : SERVER_URL;
+
+  const params: Record<string, string | number | undefined> | undefined =
+    isClientFetchOptions(paramsOrOptions) ? paramsOrOptions.params : paramsOrOptions;
+
+  const signal: AbortSignal | undefined =
+    isClientFetchOptions(paramsOrOptions) ? paramsOrOptions.signal : undefined;
+
   const url = buildUrl(base, endpoint, params);
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API Error: ${res.status} for ${url}`);
-  return res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  const cacheKey = url;
+  const now = Date.now();
+
+  if (typeof window !== "undefined") {
+    const cached = clientCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.promise as Promise<T>;
+    }
+  }
+
+  const requestPromise = fetch(url, { signal: controller.signal }).then(async (res) => {
+    if (!res.ok) throw new Error(`API Error: ${res.status} for ${url}`);
+    return res.json() as Promise<T>;
+  });
+
+  if (typeof window !== "undefined") {
+    clientCache.set(cacheKey, {
+      expiresAt: now + CLIENT_CACHE_TTL_MS,
+      promise: requestPromise,
+    });
+  }
+
+  try {
+    return await requestPromise;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function clientPost<T>(

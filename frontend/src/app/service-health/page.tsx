@@ -19,7 +19,7 @@ export default function ServiceHealthPage() {
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="h-[360px] rounded-[24px] bg-white animate-pulse shadow-sm"
+                className="h-[260px] sm:h-[320px] xl:h-[360px] rounded-[24px] bg-white animate-pulse shadow-sm"
               />
             ))}
           </div>

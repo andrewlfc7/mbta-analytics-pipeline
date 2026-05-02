@@ -174,24 +174,26 @@ export function StationsShell() {
               />
             </div>
 
-            {/* Header */}
-            <div className="grid grid-cols-[1fr_80px_80px_80px_60px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              <span>Station</span>
-              <span className="text-right">On-Time</span>
-              <span className="text-right">Avg Delay</span>
-              <span className="text-right">Late %</span>
-              <span className="text-right">Score</span>
-            </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[620px]">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_80px_80px_80px_60px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  <span>Station</span>
+                  <span className="text-right">On-Time</span>
+                  <span className="text-right">Avg Delay</span>
+                  <span className="text-right">Late %</span>
+                  <span className="text-right">Score</span>
+                </div>
 
-            {loading ? (
-              <div className="space-y-2 mt-2">
-                {[...Array(10)].map((_, i) => (
-                  <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
-                ))}
-              </div>
-            ) : (
-              <div className="max-h-[550px] overflow-y-auto">
-                {filteredStations.map((station) => (
+                {loading ? (
+                  <div className="space-y-2 mt-2">
+                    {[...Array(10)].map((_, i) => (
+                      <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="max-h-[550px] overflow-y-auto">
+                    {filteredStations.map((station) => (
                   <div
                     key={station.stop_id}
                     className={cn(
@@ -233,9 +235,11 @@ export function StationsShell() {
                       {station.delay_hotspot_score.toFixed(0)}
                     </span>
                   </div>
-                ))}
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </DashboardCard>
         </div>
 

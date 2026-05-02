@@ -123,7 +123,7 @@ export function StationMap({ data, onSelectStation, selectedStation }: Props) {
           Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local for interactive map. Showing top 30 stations by delay.
         </p>
 
-        <div className="grid grid-cols-1 gap-2 max-h-[500px] overflow-y-auto pr-2">
+        <div className="grid grid-cols-1 gap-2 max-h-[320px] sm:h-[420px] xl:h-[500px] overflow-y-auto pr-2">
           {sorted.map((station: any) => {
             const stopId = station.stop_id || station.id || "";
             const delay = station.avg_delay_minutes ?? station.avg_delay ?? 0;
@@ -180,7 +180,7 @@ export function StationMap({ data, onSelectStation, selectedStation }: Props) {
 
   return (
     <div className="rounded-xl border border-slate-700/50 bg-surface-card overflow-hidden">
-      <div ref={mapContainer} className="h-[500px] w-full" />
+      <div ref={mapContainer} className="h-[320px] sm:h-[420px] xl:h-[500px] w-full" />
       <div className="px-6 py-3 flex items-center gap-4 text-xs text-content-faint border-t border-slate-700/50">
         <div className="flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-status-success" />

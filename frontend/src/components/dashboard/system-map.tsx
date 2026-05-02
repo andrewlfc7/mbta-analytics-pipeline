@@ -213,7 +213,7 @@ export function SystemMap() {
 
   if (error) {
     return (
-      <div className="flex h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
+      <div className="flex h-[320px] sm:h-[420px] xl:h-[520px] items-center justify-center rounded-[22px] border border-slate-200 bg-slate-50">
         <div className="text-center">
           <p className="text-[13px] text-red-500">{error}</p>
           <p className="mt-1 text-[11px] text-slate-500">
@@ -234,7 +234,7 @@ export function SystemMap() {
           </div>
         </div>
       )}
-      <div ref={mapContainer} className="h-[520px] overflow-hidden rounded-[22px]" />
+      <div ref={mapContainer} className="h-[320px] sm:h-[420px] xl:h-[520px] overflow-hidden rounded-[22px]" />
       <div className="absolute bottom-4 left-4 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
           Modes

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { getCurrentWeather, getSystemOverview } from "@/lib/api";
-import { Sidebar } from "@/components/layout/sidebar";
-import { TopBar } from "@/components/layout/top-bar";
+import { AppShell } from "@/components/layout/app-shell";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -23,28 +21,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [systemOverview, weatherOverview] = await Promise.allSettled([
-    getSystemOverview(),
-    getCurrentWeather(),
-  ]);
-
-  const initialAlertCount =
-    systemOverview.status === "fulfilled"
-      ? (systemOverview.value?.active_alerts ?? 0)
-      : 0;
-  const initialLastUpdated =
-    systemOverview.status === "fulfilled"
-      ? (systemOverview.value?.last_updated ?? "")
-      : "";
-
-  const weatherPayload =
-    weatherOverview.status === "fulfilled"
-      ? weatherOverview.value?.data || weatherOverview.value || {}
-      : {};
-  const initialWeatherTemp = weatherPayload?.temp_f
-    ? `${Math.round(weatherPayload.temp_f)}°F`
-    : "--";
-  const initialWeatherCondition = weatherPayload?.condition || "";
+  const initialAlertCount = 0;
+  const initialLastUpdated = "";
+  const initialWeatherTemp = "--";
+  const initialWeatherCondition = "";
 
   return (
     <html lang="en">
@@ -55,19 +35,14 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${geistSans.className} bg-[#0F172A] text-slate-100`}>
-        <Sidebar
+        <AppShell
           initialAlertCount={initialAlertCount}
           initialLastUpdated={initialLastUpdated}
-        />
-        <div className="ml-[206px] min-h-screen bg-[#0F172A]">
-          <TopBar
-            initialTemp={initialWeatherTemp}
-            initialCondition={initialWeatherCondition}
-          />
-          <main>
-            <div className="mx-auto max-w-[1480px] px-6 py-7">{children}</div>
-          </main>
-        </div>
+          initialTemp={initialWeatherTemp}
+          initialCondition={initialWeatherCondition}
+        >
+          {children}
+        </AppShell>
       </body>
     </html>
   );

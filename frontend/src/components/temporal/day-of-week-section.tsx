@@ -148,7 +148,7 @@ export function DayOfWeekSection({ params }: Props) {
       {/* Stats table */}
       <div className="rounded-xl border border-slate-700/50 bg-surface-card">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="min-w-[720px] w-full">
             <thead>
               <tr className="border-b border-slate-700/30">
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-content-muted">Day</th>

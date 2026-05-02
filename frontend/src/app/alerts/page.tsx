@@ -16,8 +16,8 @@ export default function AlertsPage() {
             ))}
           </div>
           <div className="grid gap-4 xl:grid-cols-12">
-            <div className="h-[640px] rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-8" />
-            <div className="h-[640px] rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-4" />
+            <div className="h-[420px] sm:h-[520px] xl:h-[640px] rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-8" />
+            <div className="h-[420px] sm:h-[520px] xl:h-[640px] rounded-[24px] bg-white animate-pulse shadow-sm xl:col-span-4" />
           </div>
         </div>
       }

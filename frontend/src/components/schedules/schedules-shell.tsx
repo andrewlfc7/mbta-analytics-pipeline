@@ -132,9 +132,9 @@ export function SchedulesShell() {
         <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Route list */}
-        <div className="col-span-4">
+        <div className="xl:col-span-4">
           <DashboardCard variant="light" title={`Routes (${filteredRoutes.length})`}>
             {loading ? (
               <div className="space-y-2">
@@ -176,7 +176,7 @@ export function SchedulesShell() {
         </div>
 
         {/* Timetable panel */}
-        <div className="col-span-8">
+        <div className="xl:col-span-8">
           {!selectedRoute ? (
             <DashboardCard variant="light" title="Timetable">
               <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -219,14 +219,15 @@ export function SchedulesShell() {
                   No schedule data for this direction
                 </p>
               ) : (
-                <>
-                  <div className="grid grid-cols-[1fr_100px_100px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    <span>Stop</span>
-                    <span className="text-right">Arrives</span>
-                    <span className="text-right">Departs</span>
-                  </div>
-                  <div className="max-h-[500px] overflow-y-auto">
-                    {Object.entries(tripGroups).slice(0, 20).map(([tripId, stops]) => (
+                <div className="overflow-x-auto">
+                  <div className="min-w-[520px]">
+                    <div className="grid grid-cols-[1fr_100px_100px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      <span>Stop</span>
+                      <span className="text-right">Arrives</span>
+                      <span className="text-right">Departs</span>
+                    </div>
+                    <div className="max-h-[500px] overflow-y-auto">
+                      {Object.entries(tripGroups).slice(0, 20).map(([tripId, stops]) => (
                       <div key={tripId} className="border-b border-slate-100">
                         <div className="bg-slate-50/80 px-3 py-2">
                           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -267,9 +268,10 @@ export function SchedulesShell() {
                           </div>
                         ))}
                       </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </>
+                </div>
               )}
             </DashboardCard>
           )}

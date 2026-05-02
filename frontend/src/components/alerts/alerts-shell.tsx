@@ -87,46 +87,55 @@ export function AlertsShell() {
   const [loading, setLoading] = useState(true);
   const [expandedAlert, setExpandedAlert] = useState<string | null>(null);
 
+  const mapAlert = (a: any): AlertItem => ({
+    alert_id: a.alert_id || "",
+    severity: a.severity ?? 0,
+    severity_category: a.severity_category || "info",
+    header: a.header || "Alert",
+    effect: a.effect || "",
+    cause: a.cause || "",
+    service_effect: a.service_effect || "",
+    affected_routes: a.affected_routes ? String(a.affected_routes) : "",
+    affected_route_count: a.affected_route_count ?? 0,
+    affected_stop_count: a.affected_stop_count ?? 0,
+    impact_score: a.impact_score ?? 0,
+    duration_hours: a.duration_hours ?? 0,
+    active_start: a.active_start || "",
+    active_end: a.active_end || "",
+    updated_at: a.updated_at || "",
+  });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
+
     try {
-      const [alertsRes, summaryRes, byModeRes] = await Promise.all([
-        clientFetch<{ data: any[] }>("/alerts/active", {
-          severity: severityFilter,
-          limit: 50,
-        }),
+      const [summaryRes, byModeRes] = await Promise.allSettled([
         clientFetch<AlertSummary>("/alerts/summary"),
         clientFetch<{ data: any[] }>("/alerts/by-mode"),
       ]);
-      setAlerts(
-        (alertsRes.data || []).map((a: any) => ({
-          alert_id: a.alert_id || "",
-          severity: a.severity ?? 0,
-          severity_category: a.severity_category || "info",
-          header: a.header || "Alert",
-          effect: a.effect || "",
-          cause: a.cause || "",
-          service_effect: a.service_effect || "",
-          affected_routes: a.affected_routes
-            ? String(a.affected_routes)
-            : "",
-          affected_route_count: a.affected_route_count ?? 0,
-          affected_stop_count: a.affected_stop_count ?? 0,
-          impact_score: a.impact_score ?? 0,
-          duration_hours: a.duration_hours ?? 0,
-          active_start: a.active_start || "",
-          active_end: a.active_end || "",
-          updated_at: a.updated_at || "",
-        }))
-      );
-      setSummary(summaryRes);
-      setByMode(byModeRes.data || []);
+
+      if (summaryRes.status === "fulfilled") {
+        setSummary(summaryRes.value);
+      }
+
+      if (byModeRes.status === "fulfilled") {
+        setByMode(byModeRes.value.data || []);
+      }
+
+      setLoading(false);
+
+      const alertsRes = await clientFetch<{ data: any[] }>("/alerts/active", {
+        severity: severityFilter,
+        mode,
+        limit: 50,
+      });
+
+      setAlerts((alertsRes.data || []).map(mapAlert));
     } catch (err) {
       console.error("Alerts fetch error:", err);
-    } finally {
       setLoading(false);
     }
-  }, [severityFilter]);
+  }, [mode, severityFilter]);
 
   useEffect(() => {
     fetchData();

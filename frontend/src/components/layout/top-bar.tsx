@@ -5,9 +5,11 @@ import { Clock3, CloudSun, Menu } from "lucide-react";
 import { clientFetch } from "@/lib/api";
 
 export function TopBar({
+  onMenuClick,
   initialTemp = "--",
   initialCondition = "",
 }: {
+  onMenuClick?: () => void;
   initialTemp?: string;
   initialCondition?: string;
 }) {
@@ -63,7 +65,12 @@ export function TopBar({
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between bg-[#111B2E] px-6 shadow-none">
-      <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 text-slate-300 transition-colors hover:border-white/30 hover:text-white">
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="Open navigation"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 text-slate-300 transition-colors hover:border-white/30 hover:text-white lg:hidden"
+      >
         <Menu className="h-5 w-5" />
       </button>
       <div className="flex items-center gap-5">

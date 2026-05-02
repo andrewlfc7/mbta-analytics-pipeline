@@ -211,7 +211,8 @@ export function PerformanceTrendsChart({
               </div>
             ))}
           </div>
-          <ResponsiveContainer width="100%" height={240}>
+          <div className="h-[240px] w-full sm:h-[280px] xl:h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
               <XAxis
@@ -252,7 +253,8 @@ export function PerformanceTrendsChart({
                 />
               ))}
             </LineChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </>
       )}
     </div>

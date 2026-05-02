@@ -147,7 +147,7 @@ export function ServiceHealthShell() {
         <ModeFilterTabs selected={mode} onChange={setMode} variant="light" />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           variant="light"
           title="System On-Time"
@@ -179,13 +179,13 @@ export function ServiceHealthShell() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[360px] rounded-[24px] bg-white animate-pulse shadow-sm" />
+            <div key={i} className="h-[260px] sm:h-[320px] xl:h-[360px] rounded-[24px] bg-white animate-pulse shadow-sm" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {modeGroups.map((group) => {
             const health = getHealthStatus(group.avgOnTime);
             return (
@@ -204,7 +204,7 @@ export function ServiceHealthShell() {
                   </span>
                 }
               >
-                <div className="mb-5 grid grid-cols-3 gap-4 border-b border-slate-200 pb-5">
+                <div className="mb-5 grid grid-cols-1 gap-4 border-b border-slate-200 pb-5 sm:grid-cols-3">
                   <Metric label="On-Time" value={`${group.avgOnTime}%`} valueClass={health.text} />
                   <Metric label="Avg Delay" value={`${group.avgDelay} min`} />
                   <Metric label="Trips" value={group.totalTrips.toLocaleString()} />

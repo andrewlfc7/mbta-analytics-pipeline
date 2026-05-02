@@ -57,9 +57,13 @@ function formatLastUpdated(ts: string): string {
 }
 
 export function Sidebar({
+  mobileOpen = false,
+  onMobileClose,
   initialAlertCount = 0,
   initialLastUpdated = "",
 }: {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
   initialAlertCount?: number;
   initialLastUpdated?: string;
 }) {
@@ -82,7 +86,7 @@ export function Sidebar({
       }
     }
 
-    const interval = setInterval(fetchAlertCount, 60000);
+    const interval = setInterval(fetchAlertCount, 300000);
     return () => clearInterval(interval);
   }, []);
 
@@ -92,7 +96,20 @@ export function Sidebar({
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[206px] flex-col border-r border-[#10294B] bg-[#0C2140]">
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={onMobileClose}
+        />
+      )}
+
+      <aside className={cn(
+        "fixed left-0 top-0 z-50 flex h-screen w-[206px] flex-col border-r border-[#10294B] bg-[#0C2140] transition-transform duration-200 lg:z-40 lg:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
       <div className="shrink-0 px-5 pb-6 pt-6">
         <div className="flex flex-col">
           <span className="text-[21px] font-semibold tracking-tight text-white">
@@ -115,6 +132,7 @@ export function Sidebar({
               <li key={item.label}>
                 <Link
                   href={item.href}
+                  onClick={onMobileClose}
                   className={cn(
                     "group flex items-center gap-3 rounded-xl px-4 py-3 text-[13px] font-medium transition-all duration-150",
                     active
@@ -164,6 +182,7 @@ export function Sidebar({
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

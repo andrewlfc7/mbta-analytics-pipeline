@@ -1,20 +1,37 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
+
+const WeatherScatterCharts = dynamic(
+  () =>
+    import("@/components/weather/weather-scatter-charts").then((mod) => ({
+      default: mod.WeatherScatterCharts,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardCard variant="light" title="Loading weather chart">
+          <div className="flex h-[240px] items-center justify-center sm:h-[280px] xl:h-[320px]">
+            <span className="text-[13px] text-slate-500">Loading chart...</span>
+          </div>
+        </DashboardCard>
+        <DashboardCard variant="light" title="Loading weather chart">
+          <div className="flex h-[240px] items-center justify-center sm:h-[280px] xl:h-[320px]">
+            <span className="text-[13px] text-slate-500">Loading chart...</span>
+          </div>
+        </DashboardCard>
+      </div>
+    ),
+  }
+);
+
 import { clientFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Cloud, Droplets, Thermometer, Wind } from "lucide-react";
-import {
-  CartesianGrid,
-  ResponsiveContainer,
-  Scatter,
-  ScatterChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 interface CurrentWeather {
   temp_f: number;
@@ -45,22 +62,6 @@ interface ScatterPoint {
   y: number;
   route_id: string;
 }
-
-const formatTooltipValue = (
-  value: number | string | undefined,
-  suffix: string
-): string => {
-  const numericValue =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number(value)
-        : NaN;
-
-  return Number.isFinite(numericValue)
-    ? `${numericValue.toFixed(1)}${suffix}`
-    : "--";
-};
 
 export function WeatherShell() {
   const [current, setCurrent] = useState<CurrentWeather | null>(null);
@@ -295,105 +296,10 @@ export function WeatherShell() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DashboardCard variant="light" title="Temperature vs Delay">
-          {tempScatter.length === 0 ? (
-            <div className="flex h-[280px] items-center justify-center">
-              <p className="text-[13px] text-slate-500">No data</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis
-                  dataKey="x"
-                  type="number"
-                  name="Temperature"
-                  unit="F"
-                  tick={{ fontSize: 11, fill: "#64748B" }}
-                  axisLine={{ stroke: "#E2E8F0" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  dataKey="y"
-                  type="number"
-                  name="Delay"
-                  unit="m"
-                  tick={{ fontSize: 11, fill: "#64748B" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "14px",
-                    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)",
-                    fontSize: "12px",
-                  }}
-                  formatter={(value, name) => [
-                    formatTooltipValue(
-                      value as number | string | undefined,
-                      name === "Delay" ? " min" : "F"
-                    ),
-                    String(name),
-                  ]}
-                />
-                <Scatter data={tempScatter} fill="#2563EB" fillOpacity={0.45} r={3.5} />
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-        </DashboardCard>
-
-        <DashboardCard variant="light" title="Wind Speed vs Delay">
-          {windScatter.length === 0 ? (
-            <div className="flex h-[280px] items-center justify-center">
-              <p className="text-[13px] text-slate-500">No data</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis
-                  dataKey="x"
-                  type="number"
-                  name="Wind"
-                  unit="mph"
-                  tick={{ fontSize: 11, fill: "#64748B" }}
-                  axisLine={{ stroke: "#E2E8F0" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  dataKey="y"
-                  type="number"
-                  name="Delay"
-                  unit="m"
-                  tick={{ fontSize: 11, fill: "#64748B" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "14px",
-                    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)",
-                    fontSize: "12px",
-                  }}
-                  formatter={(value, name) => [
-                    formatTooltipValue(
-                      value as number | string | undefined,
-                      name === "Delay" ? " min" : " mph"
-                    ),
-                    String(name),
-                  ]}
-                />
-                <Scatter data={windScatter} fill="#0EA5A5" fillOpacity={0.45} r={3.5} />
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-        </DashboardCard>
-      </div>
+      <WeatherScatterCharts
+        tempScatter={tempScatter}
+        windScatter={windScatter}
+      />
     </div>
   );
 }

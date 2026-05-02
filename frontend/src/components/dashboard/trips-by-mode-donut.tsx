@@ -111,19 +111,19 @@ export function TripsByModeDonut({
   return (
     <div className="flex items-center gap-8">
       <div className="relative shrink-0">
-        <svg width="220" height="220" viewBox="0 0 220 220">
+        <svg className="h-40 w-40 sm:h-48 sm:w-48 xl:h-[220px] xl:w-[220px]" viewBox="0 0 220 220">
           {renderDonutSlices(data)}
           <circle cx="110" cy="110" r="60" fill="white" />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={`font-semibold leading-none text-slate-900 ${
-              total.toLocaleString().length > 5 ? "text-[32px]" : "text-[40px]"
+              total.toLocaleString().length >= 5 ? "text-[30px] sm:text-[34px]" : "text-[36px] sm:text-[40px]"
             }`}
           >
             {total.toLocaleString()}
           </span>
-          <span className="mt-2 text-[12px] text-slate-500">Total Trips</span>
+          <span className="mt-1 text-[11px] text-slate-500">Total Trips</span>
         </div>
       </div>
 
